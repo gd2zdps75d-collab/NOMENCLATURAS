@@ -1,0 +1,2016 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OrgánicaPro IUPAC — Simulador de Nomenclatura</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            lab: {
+              950: '#070b14',
+              900: '#0f172a',
+              800: '#1e293b',
+              700: '#334155',
+              accent: '#06b6d4',
+              emerald: '#10b981',
+              amber: '#f59e0b',
+              rose: '#f43f5e',
+              violet: '#8b5cf6'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #070b14;
+      color: #f1f5f9;
+      overflow-x: hidden;
+    }
+    .chem-grid {
+      background-image: radial-gradient(rgba(56, 189, 248, 0.12) 1px, transparent 1px);
+      background-size: 20px 20px;
+    }
+    .custom-scroll::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: rgba(100, 116, 139, 0.5);
+      border-radius: 9999px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb:hover {
+      background: rgba(56, 189, 248, 0.7);
+    }
+    .bond-line {
+      transition: all 0.25s ease;
+    }
+    .carbon-badge {
+      animation: popIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @keyframes popIn {
+      0% { transform: scale(0.5); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-cyan-500 selection:text-slate-950">
+
+  <!-- TOP NAVBAR -->
+  <header class="sticky top-0 z-30 border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+      <!-- Brand -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20 font-mono font-bold text-slate-950 text-lg">
+          C₆
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="font-bold text-lg tracking-tight text-white">Orgánica<span class="text-cyan-400">Pro</span></h1>
+            <span class="text-[11px] font-mono uppercase px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">IUPAC 70 Ejercicios</span>
+          </div>
+          <p class="text-xs text-slate-400 hidden sm:block">Simulador Gráfico de Nomenclatura de Grupos Funcionales Prioritarios</p>
+        </div>
+      </div>
+
+      <!-- Stats & Action Buttons -->
+      <div class="flex items-center gap-2 sm:gap-3">
+        <!-- Progress Pill -->
+        <div class="flex items-center gap-2.5 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl">
+          <div class="text-right">
+            <div class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Progreso Total</div>
+            <div class="text-sm font-mono font-bold text-emerald-400"><span id="stat-completed">0</span>/70 <span class="text-xs text-slate-500" id="stat-percent">(0%)</span></div>
+          </div>
+          <div class="w-px h-6 bg-slate-800"></div>
+          <div class="text-right">
+            <div class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Racha</div>
+            <div class="text-sm font-mono font-bold text-amber-400">🔥 <span id="stat-streak">0</span></div>
+          </div>
+        </div>
+
+        <!-- Cheat Sheet Modal Button -->
+        <button onclick="toggleModal('modal-cheatsheet')" class="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-cyan-500/15 to-blue-500/15 hover:from-cyan-500/25 hover:to-blue-500/25 text-cyan-300 border border-cyan-500/30 text-xs sm:text-sm font-semibold transition shadow-sm">
+          <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+          <span>Tabla de Prioridad IUPAC</span>
+        </button>
+
+        <!-- Reset Progress -->
+        <button onclick="openResetConfirm()" title="Reiniciar progreso" class="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-rose-400 border border-slate-800 transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN WORKSPACE -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-5 grid grid-cols-1 lg:grid-cols-12 gap-6">
+    
+    <!-- LEFT SIDEBAR: FUNCTIONAL GROUPS & EXERCISE SELECTOR (4 cols on desktop) -->
+    <aside class="lg:col-span-4 flex flex-col gap-4">
+      
+      <!-- Functional Group Selector Card -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-xl">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">1. Grupo Funcional Principal</h2>
+          <span class="text-[11px] text-cyan-400 font-mono">Orden de Prioridad ↓</span>
+        </div>
+        <div id="group-tabs" class="grid grid-cols-1 gap-1.5">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Difficulty & Exercise List Card -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-xl flex-1 flex flex-col">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">2. Nivel y Ejercicios (10)</h2>
+          <button onclick="pickRandomUnsolved()" class="text-xs text-cyan-400 hover:text-cyan-300 font-medium flex items-center gap-1 transition">
+            <span>🎲 Aleatorio</span>
+          </button>
+        </div>
+
+        <!-- Difficulty Filter Pills -->
+        <div class="grid grid-cols-4 gap-1 p-1 bg-slate-950 rounded-xl border border-slate-800 mb-3 text-xs font-medium">
+          <button onclick="setDifficultyFilter('ALL')" id="diff-btn-ALL" class="py-1.5 px-2 rounded-lg transition text-center bg-slate-800 text-white">Todos</button>
+          <button onclick="setDifficultyFilter('Sencillo')" id="diff-btn-Sencillo" class="py-1.5 px-2 rounded-lg transition text-center text-emerald-400 hover:bg-slate-900">Sencillo</button>
+          <button onclick="setDifficultyFilter('Intermedio')" id="diff-btn-Intermedio" class="py-1.5 px-2 rounded-lg transition text-center text-amber-400 hover:bg-slate-900">Medio</button>
+          <button onclick="setDifficultyFilter('Admin Hacker Pro')" id="diff-btn-Admin Hacker Pro" class="py-1.5 px-2 rounded-lg transition text-center text-rose-400 hover:bg-slate-900">Pro 🔥</button>
+        </div>
+
+        <!-- Exercise List -->
+        <div id="exercise-list" class="space-y-1.5 overflow-y-auto custom-scroll max-h-[380px] pr-1">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </aside>
+
+    <!-- RIGHT WORKSPACE: GRAPHICAL FORMULA, INPUT & DIAGNOSTIC FEEDBACK (8 cols on desktop) -->
+    <section class="lg:col-span-8 flex flex-col gap-5">
+
+      <!-- EXERCISE HEADER & GRAPHICAL VIEWER CARD -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col">
+        
+        <!-- Top Bar of Canvas -->
+        <div class="px-5 py-3.5 bg-slate-950/70 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-2.5">
+            <span id="ex-badge-id" class="px-2.5 py-1 rounded-lg bg-slate-800 font-mono text-xs font-bold text-cyan-300 border border-slate-700">#1</span>
+            <span id="ex-badge-group" class="px-2.5 py-1 rounded-lg bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 text-xs font-semibold">Ácido Carboxílico</span>
+            <span id="ex-badge-diff" class="px-2.5 py-1 rounded-lg text-xs font-semibold">Sencillo</span>
+            <span id="ex-solved-indicator" class="hidden px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-medium">✓ Completado</span>
+          </div>
+
+          <!-- Canvas Interactive Controls -->
+          <div class="flex items-center gap-2">
+            <button onclick="toggleNumbering()" id="btn-toggle-numbers" class="px-3 py-1.5 rounded-xl text-xs font-medium border transition flex items-center gap-1.5 bg-slate-900 border-slate-700 text-slate-300 hover:border-cyan-500/50">
+              <span class="w-2 h-2 rounded-full bg-slate-500" id="dot-numbers"></span>
+              <span>Numeración (C1, C2...)</span>
+            </button>
+            <button onclick="toggleCondensed()" id="btn-toggle-condensed" class="px-3 py-1.5 rounded-xl text-xs font-medium border transition flex items-center gap-1.5 bg-slate-900 border-slate-700 text-slate-300 hover:border-cyan-500/50">
+              <span>Fórmula Semidesarrollada</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 2D SKELETAL FORMULA SVG CONTAINER -->
+        <div class="relative chem-grid min-h-[300px] sm:min-h-[340px] flex flex-col items-center justify-center p-4 select-none overflow-hidden">
+          <!-- Legend Top-Right -->
+          <div class="absolute top-3 right-3 flex flex-wrap items-center gap-3 bg-slate-950/85 border border-slate-800/90 px-3 py-1.5 rounded-xl text-[11px] text-slate-400 backdrop-blur-sm">
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-slate-200 inline-block"></span> Vértice = Carbono</span>
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-rose-400 inline-block"></span> O (Oxígeno)</span>
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-sky-400 inline-block"></span> N (Nitrógeno)</span>
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block"></span> Halógeno</span>
+          </div>
+
+          <!-- SVG Molecule Display -->
+          <div id="svg-canvas-wrapper" class="w-full h-full flex items-center justify-center overflow-x-auto py-2">
+            <!-- Dynamic SVG injected here -->
+          </div>
+
+          <!-- Optional Condensed Formula Bar -->
+          <div id="condensed-bar" class="hidden mt-2 px-4 py-2 rounded-xl bg-slate-950/90 border border-cyan-500/30 text-cyan-200 font-mono text-xs sm:text-sm tracking-wide shadow-lg text-center">
+            <span class="text-slate-400 text-xs mr-2">Semidesarrollada:</span>
+            <span id="condensed-text"></span>
+          </div>
+        </div>
+
+        <!-- Progressive Hint Bar -->
+        <div class="px-5 py-2.5 bg-slate-950/60 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div class="flex items-center gap-2 text-slate-400">
+            <span class="font-semibold text-amber-400">💡 ¿Atascado?</span>
+            <span id="hint-display" class="text-slate-300">Usa las pistas progresivas o activa la numeración de carbonos arriba.</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <button onclick="revealHint(1)" id="hint-btn-1" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 transition">Pista 1: Grupo Rey</button>
+            <button onclick="revealHint(2)" id="hint-btn-2" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 transition">Pista 2: Cadena</button>
+            <button onclick="revealHint(3)" id="hint-btn-3" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 transition">Pista 3: Sustituyentes</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ANSWER INPUT & QUICK CHIPS CARD -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+          <label for="user-answer" class="text-sm font-semibold text-slate-200 flex items-center gap-2">
+            <span>Escribe el nombre IUPAC sistemático:</span>
+          </label>
+          <span class="text-[11px] text-slate-400">Acepta formato IUPAC moderno (ej. <code class="text-cyan-300 font-mono">pent-3-en-2-ona</code> o <code class="text-cyan-300 font-mono">3-penten-2-ona</code>)</span>
+        </div>
+
+        <!-- Quick Insert Fragments -->
+        <div class="flex flex-wrap items-center gap-1.5 mb-3">
+          <span class="text-[11px] text-slate-400 mr-1">Insertar rápido:</span>
+          <button type="button" onclick="insertToken('Ácido ')" class="px-2 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono text-xs border border-slate-700 transition">Ácido </button>
+          <button type="button" onclick="insertToken('-')" class="px-2.5 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-cyan-300 font-mono text-xs border border-slate-700 transition">-</button>
+          <button type="button" onclick="insertToken(',')" class="px-2.5 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-cyan-300 font-mono text-xs border border-slate-700 transition">,</button>
+          <button type="button" onclick="insertToken('hidroxi')" class="px-2 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-xs border border-slate-700 transition">hidroxi</button>
+          <button type="button" onclick="insertToken('oxo')" class="px-2 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-xs border border-slate-700 transition">oxo</button>
+          <button type="button" onclick="insertToken('ciano')" class="px-2 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-xs border border-slate-700 transition">ciano</button>
+          <button type="button" onclick="insertToken('formil')" class="px-2 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-xs border border-slate-700 transition">formil</button>
+          <button type="button" onclick="insertToken('carbamoil')" class="px-2 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-xs border border-slate-700 transition">carbamoil</button>
+          <button type="button" onclick="insertToken('amino')" class="px-2 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-xs border border-slate-700 transition">amino</button>
+          <button type="button" onclick="insertToken('fenil')" class="px-2 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-xs border border-slate-700 transition">fenil</button>
+          <button type="button" onclick="insertToken('bencil')" class="px-2 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-xs border border-slate-700 transition">bencil</button>
+          <button type="button" onclick="insertToken('ciclo')" class="px-2 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-xs border border-slate-700 transition">ciclo</button>
+        </div>
+
+        <!-- Input & Action Row -->
+        <div class="flex flex-col sm:flex-row gap-2.5">
+          <div class="relative flex-1">
+            <input 
+              id="user-answer" 
+              type="text" 
+               autocomplete="off"
+              spellcheck="false"
+              placeholder="Ej: Ácido 2-amino-3-fenilbutanoico" 
+              class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-700 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20 text-white font-mono text-sm sm:text-base outline-none transition"
+              onkeydown="if(event.key === 'Enter') checkUserAnswer()"
+            />
+            <button onclick="clearInput()" title="Limpiar texto" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 text-xs font-mono px-1.5 py-0.5 rounded">
+              ✕
+            </button>
+          </div>
+
+          <button onclick="checkUserAnswer()" class="px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-sm shadow-lg shadow-cyan-500/20 transition flex items-center justify-center gap-2">
+            <span>Verificar Nombre</span>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+          </button>
+
+          <button onclick="surrenderAndShow()" class="px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs sm:text-sm border border-slate-700 transition">
+            Ver Solución
+          </button>
+        </div>
+
+        <!-- Navigation Prev / Next -->
+        <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between">
+          <button onclick="navigateExercise(-1)" class="text-xs font-semibold text-slate-400 hover:text-white flex items-center gap-1.5 py-1 px-2 rounded-lg hover:bg-slate-800 transition">
+            <span>← Ejercicio Anterior</span>
+          </button>
+          <span id="nav-position-text" class="text-xs font-mono text-slate-400">Ejercicio 1 de 10</span>
+          <button onclick="navigateExercise(1)" class="text-xs font-semibold text-cyan-400 hover:text-cyan-300 flex items-center gap-1.5 py-1 px-2 rounded-lg hover:bg-slate-800 transition">
+            <span>Siguiente Ejercicio →</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- DIAGNOSTIC & FEEDBACK PANEL -->
+      <div id="feedback-panel" class="hidden bg-slate-900/95 border border-slate-800 rounded-2xl p-5 shadow-2xl space-y-4">
+        
+        <!-- Top Status Banner -->
+        <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800">
+          <div class="flex items-center gap-3">
+            <div id="fb-icon" class="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-lg"></div>
+            <div>
+              <h3 id="fb-title" class="font-bold text-base sm:text-lg"></h3>
+              <p id="fb-subtitle" class="text-xs text-slate-400"></p>
+            </div>
+          </div>
+          <!-- Accuracy Meter -->
+          <div class="flex items-center gap-3 bg-slate-950 px-3.5 py-2 rounded-xl border border-slate-800">
+            <div class="text-right">
+              <div class="text-[10px] uppercase tracking-wider text-slate-400">Precisión de tu respuesta</div>
+              <div id="fb-score-text" class="text-base font-mono font-bold text-cyan-400">100%</div>
+            </div>
+            <div class="w-16 h-2.5 bg-slate-800 rounded-full overflow-hidden">
+              <div id="fb-score-bar" class="h-full bg-cyan-400 transition-all duration-500" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Component Diagnostic Grid (4 Pillars of IUPAC) -->
+        <div>
+          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2.5">Diagnóstico por Componentes IUPAC</h4>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5" id="fb-components-grid">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+
+        <!-- Official Name & Detailed Step-by-Step Breakdown -->
+        <div class="bg-slate-950/90 border border-slate-800 rounded-xl p-4 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <span class="text-xs uppercase font-bold tracking-wider text-cyan-400">Nombre IUPAC Oficial</span>
+            <span id="fb-alt-names" class="text-[11px] font-mono text-slate-400"></span>
+          </div>
+          <div id="fb-official-name" class="text-base sm:text-lg font-mono font-bold text-white bg-slate-900 px-3.5 py-2 rounded-lg border border-slate-800"></div>
+
+          <!-- 4-Step Explanation -->
+          <div class="pt-2 border-t border-slate-800/80 space-y-2 text-xs sm:text-sm text-slate-300 leading-relaxed" id="fb-explanation">
+          </div>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- MODAL: IUPAC PRIORITY CHEAT SHEET -->
+  <div id="modal-cheatsheet" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-4xl w-full max-h-[88vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="px-6 py-4 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
+        <div>
+          <h2 class="font-bold text-lg text-white">Tabla Oficial de Prioridad IUPAC y Radicales Especiales</h2>
+          <p class="text-xs text-slate-400">El grupo ubicado más arriba define el sufijo principal y el Carbono 1. Todos los demás pasan a ser prefijos (sustituyentes).</p>
+        </div>
+        <button onclick="toggleModal('modal-cheatsheet')" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300">✕</button>
+      </div>
+
+      <div class="p-6 overflow-y-auto custom-scroll space-y-6 text-xs sm:text-sm">
+        <!-- Priority Table -->
+        <div class="overflow-x-auto rounded-xl border border-slate-800">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-slate-950 text-slate-300 border-b border-slate-800 text-xs uppercase">
+                <th class="py-2.5 px-3">Prioridad</th>
+                <th class="py-2.5 px-3">Grupo Funcional</th>
+                <th class="py-2.5 px-3">Fórmula</th>
+                <th class="py-2.5 px-3 text-cyan-400">Sufijo (Si es Principal)</th>
+                <th class="py-2.5 px-3 text-amber-400">Prefijo (Si está Degradado)</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/70 font-mono text-xs">
+              <tr class="bg-slate-900/60">
+                <td class="py-2.5 px-3 font-bold text-rose-400">1° (Máxima)</td>
+                <td class="py-2.5 px-3 font-sans font-semibold text-white">Ácido Carboxílico</td>
+                <td class="py-2.5 px-3 text-slate-300">-COOH</td>
+                <td class="py-2.5 px-3 text-cyan-300">Ácido ...-oico <span class="text-slate-400">(o -carboxílico)</span></td>
+                <td class="py-2.5 px-3 text-amber-300">carboxi-</td>
+              </tr>
+              <tr>
+                <td class="py-2.5 px-3 font-bold text-orange-400">2°</td>
+                <td class="py-2.5 px-3 font-sans font-semibold text-white">Éster</td>
+                <td class="py-2.5 px-3 text-slate-300">-COO-R</td>
+                <td class="py-2.5 px-3 text-cyan-300">...-oato de [alquilo]</td>
+                <td class="py-2.5 px-3 text-amber-300">alcoxicarbonil- <span class="text-slate-400">(ej. metoxicarbonil)</span></td>
+              </tr>
+              <tr class="bg-slate-900/60">
+                <td class="py-2.5 px-3 font-bold text-amber-400">3°</td>
+                <td class="py-2.5 px-3 font-sans font-semibold text-white">Amida</td>
+                <td class="py-2.5 px-3 text-slate-300">-CONH₂</td>
+                <td class="py-2.5 px-3 text-cyan-300">...-amida <span class="text-slate-400">(o -carboxamida)</span></td>
+                <td class="py-2.5 px-3 text-amber-300">carbamoil-</td>
+              </tr>
+              <tr>
+                <td class="py-2.5 px-3 font-bold text-yellow-400">4°</td>
+                <td class="py-2.5 px-3 font-sans font-semibold text-white">Nitrilo</td>
+                <td class="py-2.5 px-3 text-slate-300">-C≡N</td>
+                <td class="py-2.5 px-3 text-cyan-300">...-nitrilo <span class="text-slate-400">(o -carbonitrilo)</span></td>
+                <td class="py-2.5 px-3 text-amber-300">ciano-</td>
+              </tr>
+              <tr class="bg-slate-900/60">
+                <td class="py-2.5 px-3 font-bold text-emerald-400">5°</td>
+                <td class="py-2.5 px-3 font-sans font-semibold text-white">Aldehído</td>
+                <td class="py-2.5 px-3 text-slate-300">-CHO</td>
+                <td class="py-2.5 px-3 text-cyan-300">...-al <span class="text-slate-400">(o -carbaldehído)</span></td>
+                <td class="py-2.5 px-3 text-amber-300">oxo- <span class="text-slate-400">(en cadena)</span> / formil-</td>
+              </tr>
+              <tr>
+                <td class="py-2.5 px-3 font-bold text-cyan-400">6°</td>
+                <td class="py-2.5 px-3 font-sans font-semibold text-white">Cetona</td>
+                <td class="py-2.5 px-3 text-slate-300">-CO-</td>
+                <td class="py-2.5 px-3 text-cyan-300">...-ona</td>
+                <td class="py-2.5 px-3 text-amber-300">oxo-</td>
+              </tr>
+              <tr class="bg-slate-900/60">
+                <td class="py-2.5 px-3 font-bold text-blue-400">7°</td>
+                <td class="py-2.5 px-3 font-sans font-semibold text-white">Alcohol</td>
+                <td class="py-2.5 px-3 text-slate-300">-OH</td>
+                <td class="py-2.5 px-3 text-cyan-300">...-ol</td>
+                <td class="py-2.5 px-3 text-amber-300">hidroxi-</td>
+              </tr>
+              <tr>
+                <td class="py-2.5 px-3 font-bold text-violet-400">8° (Subordinado)</td>
+                <td class="py-2.5 px-3 font-sans font-semibold text-white">Amina</td>
+                <td class="py-2.5 px-3 text-slate-300">-NH₂</td>
+                <td class="py-2.5 px-3 text-cyan-300">...-amina</td>
+                <td class="py-2.5 px-3 text-amber-300">amino-</td>
+              </tr>
+              <tr class="bg-slate-900/60">
+                <td class="py-2.5 px-3 font-bold text-slate-400">9°</td>
+                <td class="py-2.5 px-3 font-sans font-semibold text-white">Alquenos y Alquinos</td>
+                <td class="py-2.5 px-3 text-slate-300">C=C / C≡C</td>
+                <td class="py-2.5 px-3 text-cyan-300">...-en-...-ino</td>
+                <td class="py-2.5 px-3 text-slate-400">Incrustados en la raíz (ej. pent-3-en-1-ino)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Common Tricky Radicals -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+            <h4 class="font-bold text-cyan-400 mb-1">Fenil vs Ciclohexil</h4>
+            <p class="text-slate-300 text-xs leading-relaxed">
+              <strong>fenil- (-C₆H₅):</strong> Anillo de benceno (con círculo o 3 dobles enlaces internos) unido directo a la cadena.<br>
+              <strong>ciclohexil- (-C₆H₁₁):</strong> Anillo de 6 lados limpio (alcano cíclico sin dobles enlaces).
+            </p>
+          </div>
+          <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+            <h4 class="font-bold text-amber-400 mb-1">Fenil vs Bencil</h4>
+            <p class="text-slate-300 text-xs leading-relaxed">
+              <strong>fenil-:</strong> El benceno se pega directo al carbono de la cadena.<br>
+              <strong>bencil- (-CH₂-C₆H₅):</strong> Hay un puente <code class="text-amber-300">-CH₂-</code> entre la cadena principal y el anillo de benceno.
+            </p>
+          </div>
+          <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+            <h4 class="font-bold text-emerald-400 mb-1">Doble + Triple Enlace</h4>
+            <p class="text-slate-300 text-xs leading-relaxed">
+              Siempre se escribe primero el doble enlace (<strong>-en-</strong>) y luego el triple (<strong>-in-</strong>) antes del sufijo principal. Ejemplo: <code class="text-emerald-300">hept-5-en-3-inoico</code>.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: RESET CONFIRMATION -->
+  <div id="modal-reset" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+      <h3 class="font-bold text-lg text-white">¿Reiniciar todo tu progreso?</h3>
+      <p class="text-xs sm:text-sm text-slate-300">Se borrarán los ejercicios marcados como completados y la racha actual. Esta acción no se puede deshacer.</p>
+      <div class="flex items-center justify-end gap-3 pt-2">
+        <button onclick="toggleModal('modal-reset')" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold">Cancelar</button>
+        <button onclick="confirmResetProgress()" class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold">Sí, reiniciar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /***********************************************************************
+     * 1. COMPLETE DATABASE OF 70 VERIFIED IUPAC EXERCISES
+     * 7 Functional Groups x 10 Exercises (4 Sencillo, 3 Intermedio, 3 Admin Hacker Pro)
+     ***********************************************************************/
+    const GROUPS_META = [
+      { id: 'acido', name: 'Ácido Carboxílico', formula: '-COOH', priority: 1, suffix: 'Ácido ...-oico', prefix: 'carboxi-', color: 'rose' },
+      { id: 'ester', name: 'Éster', formula: '-COO-R', priority: 2, suffix: '...-oato de ...-ilo', prefix: 'alcoxicarbonil-', color: 'orange' },
+      { id: 'amida', name: 'Amida', formula: '-CONH₂', priority: 3, suffix: '...-amida', prefix: 'carbamoil-', color: 'amber' },
+      { id: 'nitrilo', name: 'Nitrilo', formula: '-C≡N', priority: 4, suffix: '...-nitrilo', prefix: 'ciano-', color: 'yellow' },
+      { id: 'aldehido', name: 'Aldehído', formula: '-CHO', priority: 5, suffix: '...-al', prefix: 'oxo- / formil-', color: 'emerald' },
+      { id: 'cetona', name: 'Cetona', formula: '-CO-', priority: 6, suffix: '...-ona', prefix: 'oxo-', color: 'cyan' },
+      { id: 'alcohol', name: 'Alcohol', formula: '-OH', priority: 7, suffix: '...-ol', prefix: 'hidroxi-', color: 'blue' }
+    ];
+
+    const EXERCISES = [
+      // ===================================================================
+      // GRUPO 1: ÁCIDO CARBOXÍLICO (10 Ejercicios)
+      // ===================================================================
+      {
+        id: 'ac-1', group: 'acido', difficulty: 'Sencillo',
+        name: 'Ácido 3-metilbutanoico',
+        altNames: ['acido 3-metilbutanoico'],
+        condensed: 'CH₃-CH(CH₃)-CH₂-COOH',
+        parts: { suffix: 'Ácido ...-oico', root: 'butan (4C)', subs: ['3-metil'] },
+        hints: ['El grupo -COOH es el C1 en el extremo derecho.', 'La cadena principal tiene 4 carbonos (butan-).', 'En el carbono 3 hay un radical metil.'],
+        explanation: '1) El grupo carboxilo (-COOH) define el C1 y el formato "Ácido ...-oico". 2) Cadena de 4 carbonos sin dobles enlaces (butanoico). 3) Un grupo metilo en el C3: Ácido 3-metilbutanoico.',
+        structure: { chain: 4, c1Right: true, principal: 'COOH', bonds: [], subs: [{ pos: 3, type: 'me' }] }
+      },
+      {
+        id: 'ac-2', group: 'acido', difficulty: 'Sencillo',
+        name: 'Ácido pent-3-enoico',
+        altNames: ['Ácido 3-pentenoico', 'acido pent-3-enoico', 'acido 3-pentenoico'],
+        condensed: 'CH₃-CH=CH-CH₂-COOH',
+        parts: { suffix: 'Ácido ...-oico', root: 'pent-3-en (5C)', subs: ['Ninguno'] },
+        hints: ['El -COOH está a la derecha (C1).', 'Cuenta 5 carbonos seguidos (pent-).', 'Hay un doble enlace entre C3 y C4 (3-en).'],
+        explanation: '1) El ácido carboxílico es el C1. 2) Cadena lineal de 5 carbonos (pent-). 3) El doble enlace inicia en el carbono 3: Ácido pent-3-enoico.',
+        structure: { chain: 5, c1Right: true, principal: 'COOH', bonds: [{ pos: 3, order: 2 }], subs: [] }
+      },
+      {
+        id: 'ac-3', group: 'acido', difficulty: 'Sencillo',
+        name: 'Ácido 2-etil-4-metilpentanoico',
+        altNames: ['acido 2-etil-4-metilpentanoico'],
+        condensed: 'CH₃-CH(CH₃)-CH₂-CH(CH₂CH₃)-COOH',
+        parts: { suffix: 'Ácido ...-oico', root: 'pentan (5C)', subs: ['2-etil', '4-metil'] },
+        hints: ['El -COOH es el C1.', 'La cadena más larga tiene 5 carbonos (pentanoico).', 'Hay un etil en C2 y un metil en C4 (orden alfabético: etil antes que metil).'],
+        explanation: '1) C1 en el grupo -COOH. 2) Cadena de 5 carbonos. 3) Sustituyentes en C2 (etil) y C4 (metil). Alfabéticamente "etil" precede a "metil": Ácido 2-etil-4-metilpentanoico.',
+        structure: { chain: 5, c1Right: true, principal: 'COOH', bonds: [], subs: [{ pos: 2, type: 'et' }, { pos: 4, type: 'me' }] }
+      },
+      {
+        id: 'ac-4', group: 'acido', difficulty: 'Sencillo',
+        name: 'Ácido 4-ciclohexilbutanoico',
+        altNames: ['acido 4-ciclohexilbutanoico'],
+        condensed: 'C₆H₁₁-CH₂-CH₂-CH₂-COOH',
+        parts: { suffix: 'Ácido ...-oico', root: 'butan (4C)', subs: ['4-ciclohexil'] },
+        hints: ['El grupo -COOH está en la cadena abierta, por lo que la cadena abierta es la principal.', 'Son 4 carbonos en la cadena abierta (butanoico).', 'En el C4 hay un anillo saturado de 6 carbonos (ciclohexil).'],
+        explanation: '1) La cadena que contiene el grupo funcional principal (-COOH) tiene 4 carbonos (butanoico). 2) El anillo de 6 carbonos sin dobles enlaces unido al C4 actúa como radical ciclohexil.',
+        structure: { chain: 4, c1Right: true, principal: 'COOH', bonds: [], subs: [{ pos: 4, type: 'chex' }] }
+      },
+      {
+        id: 'ac-5', group: 'acido', difficulty: 'Intermedio',
+        name: 'Ácido 2-amino-3-fenilbutanoico',
+        altNames: ['acido 2-amino-3-fenilbutanoico'],
+        condensed: 'CH₃-CH(C₆H₅)-CH(NH₂)-COOH',
+        parts: { suffix: 'Ácido ...-oico', root: 'butan (4C)', subs: ['2-amino', '3-fenil'] },
+        hints: ['El -COOH manda y es el C1.', 'Cadena principal de 4 carbonos (butanoico).', 'En C2 hay una amina (amino-) y en C3 un benceno directo (fenil-).'],
+        explanation: '1) El ácido carboxílico (-COOH) es el C1. 2) Cadena de 4 carbonos (butanoico). 3) En C2 hay un grupo -NH₂ degradado a "amino" y en C3 un anillo aromático "fenil". Orden alfabético: 2-amino-3-fenil.',
+        structure: { chain: 4, c1Right: true, principal: 'COOH', bonds: [], subs: [{ pos: 2, type: 'NH2' }, { pos: 3, type: 'ph' }] }
+      },
+      {
+        id: 'ac-6', group: 'acido', difficulty: 'Intermedio',
+        name: 'Ácido 3-hidroxi-5-oxohexanoico',
+        altNames: ['acido 3-hidroxi-5-oxohexanoico'],
+        condensed: 'CH₃-CO-CH₂-CH(OH)-CH₂-COOH',
+        parts: { suffix: 'Ácido ...-oico', root: 'hexan (6C)', subs: ['3-hidroxi', '5-oxo'] },
+        hints: ['El ácido carboxílico (-COOH) degrada tanto al alcohol (-OH) como a la cetona (=O).', 'Cadena de 6 carbonos (hexanoico).', 'En C3 hay un alcohol (hidroxi-) y en C5 una cetona (oxo-).'],
+        explanation: '1) El -COOH tiene prioridad sobre la cetona y el alcohol. 2) En C3 el -OH se nombra como "hidroxi" y en C5 el =O cetónico como "oxo". Alfabéticamente: 3-hidroxi-5-oxohexanoico.',
+        structure: { chain: 6, c1Right: true, principal: 'COOH', bonds: [], subs: [{ pos: 3, type: 'OH' }, { pos: 5, type: 'oxo' }] }
+      },
+      {
+        id: 'ac-7', group: 'acido', difficulty: 'Intermedio',
+        name: 'Ácido 4-cianohex-5-enoico',
+        altNames: ['Ácido 4-ciano-5-hexenoico', 'acido 4-cianohex-5-enoico'],
+        condensed: 'CH₂=CH-CH(CN)-CH₂-CH₂-COOH',
+        parts: { suffix: 'Ácido ...-oico', root: 'hex-5-en (6C)', subs: ['4-ciano'] },
+        hints: ['El -COOH vence al nitrilo (-CN).', 'La cadena principal incluye el doble enlace (6 carbonos: hex-5-enoico).', 'El grupo -CN en C4 se nombra como sustituyente "ciano".'],
+        explanation: '1) El -COOH es el C1. 2) La cadena principal sigue hacia el doble enlace terminal sumando 6 carbonos (hex-5-enoico). 3) El nitrilo (-CN) en C4 queda como prefijo "4-ciano".',
+        structure: { chain: 6, c1Right: true, principal: 'COOH', bonds: [{ pos: 5, order: 2 }], subs: [{ pos: 4, type: 'CN' }] }
+      },
+      {
+        id: 'ac-8', group: 'acido', difficulty: 'Admin Hacker Pro',
+        name: 'Ácido 4-fenil-3-hidroxioct-7-en-5-inoico',
+        altNames: ['acido 4-fenil-3-hidroxioct-7-en-5-inoico', 'Ácido 4-fenil-3-hidroxi-7-octen-5-inoico'],
+        condensed: 'CH₂=CH-C≡C-CH(C₆H₅)-CH(OH)-CH₂-COOH',
+        parts: { suffix: 'Ácido ...-oico', root: 'oct-7-en-5-in (8C)', subs: ['4-fenil', '3-hidroxi'] },
+        hints: ['C1 es el -COOH a la derecha. La cadena tiene 8 carbonos (oct-).', 'Hay un triple enlace en C5 (-5-in-) y un doble enlace en C7 (-7-en-). Primero va -en- y luego -in-.', 'En C3 hay hidroxi y en C4 fenil (alfabéticamente: 4-fenil-3-hidroxi).'],
+        explanation: '1) C1 en el grupo -COOH con cadena de 8 carbonos. 2) Insaturaciones: doble enlace en C7 y triple en C5 (oct-7-en-5-inoico). 3) Sustituyentes en orden alfabético: 4-fenil antes que 3-hidroxi.',
+        structure: { chain: 8, c1Right: true, principal: 'COOH', bonds: [{ pos: 5, order: 3 }, { pos: 7, order: 2 }], subs: [{ pos: 3, type: 'OH' }, { pos: 4, type: 'ph' }] }
+      },
+      {
+        id: 'ac-9', group: 'acido', difficulty: 'Admin Hacker Pro',
+        name: 'Ácido 3-bencil-5-carbamoil-4-oxohexanoico',
+        altNames: ['acido 3-bencil-5-carbamoil-4-oxohexanoico'],
+        condensed: 'CH₃-CH(CONH₂)-CO-CH(CH₂C₆H₅)-CH₂-COOH',
+        parts: { suffix: 'Ácido ...-oico', root: 'hexan (6C)', subs: ['3-bencil', '5-carbamoil', '4-oxo'] },
+        hints: ['El -COOH degrada a la amida (-CONH₂) y a la cetona (=O).', 'En C3 hay un benceno con un puente -CH₂- (bencil-). En C4 hay oxo- y en C5 carbamoil-.', 'Orden alfabético: bencil (B) -> carbamoil (C) -> oxo (O).'],
+        explanation: '1) El -COOH define el C1 y la cadena de 6 carbonos (hexanoico). 2) Sustituyentes degradados: en C3 un radical bencil (-CH₂-C₆H₅), en C4 una cetona (oxo) y en C5 una amida (carbamoil).',
+        structure: { chain: 6, c1Right: true, principal: 'COOH', bonds: [], subs: [{ pos: 3, type: 'bn' }, { pos: 4, type: 'oxo' }, { pos: 5, type: 'CONH2' }] }
+      },
+      {
+        id: 'ac-10', group: 'acido', difficulty: 'Admin Hacker Pro',
+        name: 'Ácido 5-ciano-2-ciclohexil-6-oxohept-3-enoico',
+        altNames: ['acido 5-ciano-2-ciclohexil-6-oxohept-3-enoico', 'Ácido 5-ciano-2-ciclohexil-6-oxo-3-heptenoico'],
+        condensed: 'CH₃-CO-CH(CN)-CH=CH-CH(C₆H₁₁)-COOH',
+        parts: { suffix: 'Ácido ...-oico', root: 'hept-3-en (7C)', subs: ['5-ciano', '2-ciclohexil', '6-oxo'] },
+        hints: ['Cadena de 7 carbonos desde el -COOH (C1) hasta el metilo final (C7).', 'Doble enlace en C3 (hept-3-enoico).', 'Sustituyentes: 2-ciclohexil, 5-ciano, 6-oxo. Cuidado con el orden alfabético: ciano (c-i-a) va antes que ciclohexil (c-i-c).'],
+        explanation: '1) Cadena de 7 carbonos con doble enlace en C3 (hept-3-enoico). 2) Tres sustituyentes: en C5 ciano, en C2 ciclohexil y en C6 oxo. Por orden alfabético "ciano" antecede a "ciclohexil".',
+        structure: { chain: 7, c1Right: true, principal: 'COOH', bonds: [{ pos: 3, order: 2 }], subs: [{ pos: 2, type: 'chex' }, { pos: 5, type: 'CN' }, { pos: 6, type: 'oxo' }] }
+      },
+
+      // ===================================================================
+      // GRUPO 2: ÉSTER (10 Ejercicios)
+      // ===================================================================
+      {
+        id: 'es-1', group: 'ester', difficulty: 'Sencillo',
+        name: 'Propanoato de metilo',
+        altNames: [],
+        condensed: 'CH₃-CH₂-COO-CH₃',
+        parts: { suffix: '...-oato de metilo', root: 'propan (3C)', subs: ['Ninguno'] },
+        hints: ['La cadena principal con el C=O tiene 3 carbonos (propanoato).', 'Unido al oxígeno simple hay un grupo metilo (-CH₃).', 'Formato: [Raíz]oato de [alquilo].'],
+        explanation: '1) El carbono carbonílico del éster es el C1 de una cadena de 3 carbonos (propanoato). 2) El radical unido al oxígeno es un metilo: Propanoato de metilo.',
+        structure: { chain: 3, c1Right: true, principal: 'COOMe', bonds: [], subs: [] }
+      },
+      {
+        id: 'es-2', group: 'ester', difficulty: 'Sencillo',
+        name: '3-metilbutanoato de etilo',
+        altNames: [],
+        condensed: 'CH₃-CH(CH₃)-CH₂-COO-CH₂CH₃',
+        parts: { suffix: '...-oato de etilo', root: 'butan (4C)', subs: ['3-metil'] },
+        hints: ['La parte ácida tiene 4 carbonos (butanoato) con un metil en C3.', 'Unido al oxígeno del éster hay un radical de 2 carbonos (de etilo).', 'Une ambas partes: 3-metilbutanoato de etilo.'],
+        explanation: '1) Cadena principal de 4 carbonos con el éster en C1 y un metil en C3 (3-metilbutanoato). 2) El grupo alcoxi es un etilo (-CH₂CH₃): 3-metilbutanoato de etilo.',
+        structure: { chain: 4, c1Right: true, principal: 'COOEt', bonds: [], subs: [{ pos: 3, type: 'me' }] }
+      },
+      {
+        id: 'es-3', group: 'ester', difficulty: 'Sencillo',
+        name: 'But-2-enoato de metilo',
+        altNames: ['2-butenoato de metilo'],
+        condensed: 'CH₃-CH=CH-COO-CH₃',
+        parts: { suffix: '...-oato de metilo', root: 'but-2-en (4C)', subs: ['Ninguno'] },
+        hints: ['Cadena principal de 4 carbonos con doble enlace en C2.', 'Terminación del éster con -CH₃: "...-oato de metilo".', 'Nombre de la cadena: but-2-enoato.'],
+        explanation: '1) C1 en el carbono del éster. 2) Cadena de 4 carbonos con insaturación en C2 (but-2-enoato). 3) Radical del oxígeno: de metilo.',
+        structure: { chain: 4, c1Right: true, principal: 'COOMe', bonds: [{ pos: 2, order: 2 }], subs: [] }
+      },
+      {
+        id: 'es-4', group: 'ester', difficulty: 'Sencillo',
+        name: '2-ciclopentilacetato de metilo',
+        altNames: ['Ciclopentilacetato de metilo', '2-ciclopentiletanoato de metilo', 'Ciclopentiletanoato de metilo'],
+        condensed: 'C₅H₉-CH₂-COO-CH₃',
+        parts: { suffix: '...-oato de metilo', root: 'etan (2C)', subs: ['2-ciclopentil'] },
+        hints: ['La cadena principal del éster tiene solo 2 carbonos (etanoato).', 'En el carbono 2 hay un anillo de 5 lados (ciclopentil).', 'Se nombra como 2-ciclopentiletanoato de metilo.'],
+        acceptCanonical: '2-ciclopentiletanoato de metilo',
+        explanation: '1) Cadena principal de 2 carbonos (etanoato de metilo). 2) En el C2 se une un anillo saturado de 5 carbonos (2-ciclopentil): 2-ciclopentiletanoato de metilo.',
+        structure: { chain: 2, c1Right: true, principal: 'COOMe', bonds: [], subs: [{ pos: 2, type: 'cpent' }] }
+      },
+      {
+        id: 'es-5', group: 'ester', difficulty: 'Intermedio',
+        name: '3-hidroxi-2-metilpentanoato de etilo',
+        altNames: [],
+        condensed: 'CH₃-CH₂-CH(OH)-CH(CH₃)-COO-CH₂CH₃',
+        parts: { suffix: '...-oato de etilo', root: 'pentan (5C)', subs: ['3-hidroxi', '2-metil'] },
+        hints: ['El éster (-COOEt) tiene prioridad sobre el alcohol (-OH).', 'Cadena de 5 carbonos (pentanoato de etilo).', 'Sustituyentes: 3-hidroxi y 2-metil.'],
+        explanation: '1) El éster define el C1 y el sufijo "...-oato de etilo". 2) En C2 hay un metil y en C3 un alcohol degradado a "hidroxi". Alfabéticamente: 3-hidroxi-2-metilpentanoato de etilo.',
+        structure: { chain: 5, c1Right: true, principal: 'COOEt', bonds: [], subs: [{ pos: 2, type: 'me' }, { pos: 3, type: 'OH' }] }
+      },
+      {
+        id: 'es-6', group: 'ester', difficulty: 'Intermedio',
+        name: '4-oxo-3-fenilpentanoato de metilo',
+        altNames: ['3-fenil-4-oxopentanoato de metilo'],
+        condensed: 'CH₃-CO-CH(C₆H₅)-CH₂-COO-CH₃',
+        parts: { suffix: '...-oato de metilo', root: 'pentan (5C)', subs: ['3-fenil', '4-oxo'] },
+        hints: ['El éster le gana a la cetona. C1 es el carbono del éster.', 'En C3 hay un fenil y en C4 una cetona degradada (oxo).', 'Orden alfabético estricto: fenil (F) antes que oxo (O) -> 3-fenil-4-oxopentanoato de metilo.'],
+        acceptCanonical: '3-fenil-4-oxopentanoato de metilo',
+        explanation: '1) El grupo éster es prioritario sobre la cetona. 2) Cadena de 5 carbonos (pentanoato de metilo). 3) En C3 hay un fenil y en C4 un grupo oxo: 3-fenil-4-oxopentanoato de metilo.',
+        structure: { chain: 5, c1Right: true, principal: 'COOMe', bonds: [], subs: [{ pos: 3, type: 'ph' }, { pos: 4, type: 'oxo' }] }
+      },
+      {
+        id: 'es-7', group: 'ester', difficulty: 'Intermedio',
+        name: '2-amino-4-cianobutanoato de metilo',
+        altNames: [],
+        condensed: 'NC-CH₂-CH₂-CH(NH₂)-COO-CH₃',
+        parts: { suffix: '...-oato de metilo', root: 'butan (4C)', subs: ['2-amino', '4-ciano'] },
+        hints: ['El éster es C1. Ojo: el grupo -CN en el otro extremo es un sustituyente "ciano", su carbono NO se suma a la cadena si lo nombramos como ciano.', 'Cadena de 4 carbonos (butanoato) con el grupo ciano unido al C4.', 'En C2 hay un grupo amino: 2-amino-4-cianobutanoato de metilo.'],
+        explanation: '1) C1 en el éster. 2) Cadena de 4 carbonos (butanoato de metilo). 3) En C2 hay un grupo amino y unido al C4 hay un grupo nitrilo degradado a prefijo "ciano".',
+        structure: { chain: 4, c1Right: true, principal: 'COOMe', bonds: [], subs: [{ pos: 2, type: 'NH2' }, { pos: 4, type: 'CN' }] }
+      },
+      {
+        id: 'es-8', group: 'ester', difficulty: 'Admin Hacker Pro',
+        name: '4-bencil-5-carbamoil-3-oxohex-5-enoato de metilo',
+        altNames: ['4-bencil-5-carbamoil-3-oxo-5-hexenoato de metilo'],
+        condensed: 'CH₂=C(CONH₂)-CH(CH₂C₆H₅)-CO-CH₂-COO-CH₃',
+        parts: { suffix: '...-oato de metilo', root: 'hex-5-en (6C)', subs: ['4-bencil', '5-carbamoil', '3-oxo'] },
+        hints: ['¡Uno de los clásicos que repasamos! El éster (-COOCH₃) es el C1.', 'Cadena de 6 carbonos con doble enlace en C5 (hex-5-enoato de metilo).', 'Sustituyentes en orden alfabético: 4-bencil (B), 5-carbamoil (C), 3-oxo (O).'],
+        explanation: '1) El éster (-COOCH₃) supera a la amida y a la cetona. 2) Cadena de 6 carbonos con doble enlace en C5 (hex-5-enoato de metilo). 3) En C3 hay oxo, en C4 bencil y en C5 carbamoil.',
+        structure: { chain: 6, c1Right: true, principal: 'COOMe', bonds: [{ pos: 5, order: 2 }], subs: [{ pos: 3, type: 'oxo' }, { pos: 4, type: 'bn' }, { pos: 5, type: 'CONH2' }] }
+      },
+      {
+        id: 'es-9', group: 'ester', difficulty: 'Admin Hacker Pro',
+        name: '3-ciclohexil-2-hidroxihept-4-en-6-inoato de etilo',
+        altNames: ['3-ciclohexil-2-hidroxi-4-hepten-6-inoato de etilo'],
+        condensed: 'CH≡C-CH=CH-CH(C₆H₁₁)-CH(OH)-COO-CH₂CH₃',
+        parts: { suffix: '...-oato de etilo', root: 'hept-4-en-6-in (7C)', subs: ['3-ciclohexil', '2-hidroxi'] },
+        hints: ['Cadena de 7 carbonos terminada en -oato de etilo.', 'Doble enlace en C4 (-4-en-) y triple enlace en C6 (-6-in-).', 'Sustituyentes: 3-ciclohexil y 2-hidroxi.'],
+        explanation: '1) Éster de etilo en C1 con cadena de 7 carbonos. 2) Insaturaciones: hept-4-en-6-inoato. 3) Sustituyentes en C3 (ciclohexil) y C2 (hidroxi).',
+        structure: { chain: 7, c1Right: true, principal: 'COOEt', bonds: [{ pos: 4, order: 2 }, { pos: 6, order: 3 }], subs: [{ pos: 2, type: 'OH' }, { pos: 3, type: 'chex' }] }
+      },
+      {
+        id: 'es-10', group: 'ester', difficulty: 'Admin Hacker Pro',
+        name: '4-ciano-2-fenil-3-hidroxi-5-oxohexanoato de metilo',
+        altNames: [],
+        condensed: 'CH₃-CO-CH(CN)-CH(OH)-CH(C₆H₅)-COO-CH₃',
+        parts: { suffix: '...-oato de metilo', root: 'hexan (6C)', subs: ['4-ciano', '2-fenil', '3-hidroxi', '5-oxo'] },
+        hints: ['Cadena de 6 carbonos con éster de metilo en C1.', 'Cuatro sustituyentes: en C2 fenil, en C3 hidroxi, en C4 ciano y en C5 oxo.', 'Orden alfabético: 4-ciano -> 2-fenil -> 3-hidroxi -> 5-oxo.'],
+        explanation: '1) El éster en C1 degrada al nitrilo, la cetona y el alcohol. 2) Se ordenan alfabéticamente los 4 prefijos: ciano (C), fenil (F), hidroxi (H), oxo (O).',
+        structure: { chain: 6, c1Right: true, principal: 'COOMe', bonds: [], subs: [{ pos: 2, type: 'ph' }, { pos: 3, type: 'OH' }, { pos: 4, type: 'CN' }, { pos: 5, type: 'oxo' }] }
+      },
+
+      // ===================================================================
+      // GRUPO 3: AMIDA (10 Ejercicios)
+      // ===================================================================
+      {
+        id: 'am-1', group: 'amida', difficulty: 'Sencillo',
+        name: '2-metilpropanamida',
+        altNames: [],
+        condensed: 'CH₃-CH(CH₃)-CONH₂',
+        parts: { suffix: '...-amida', root: 'propan (3C)', subs: ['2-metil'] },
+        hints: ['El grupo -CONH₂ es el C1.', 'Cadena principal de 3 carbonos (propanamida).', 'En el C2 hay un radical metil.'],
+        explanation: '1) El carbono de la amida (-CONH₂) es el C1. 2) Cadena de 3 carbonos (propanamida) con un grupo metilo en C2: 2-metilpropanamida.',
+        structure: { chain: 3, c1Right: true, principal: 'CONH2', bonds: [], subs: [{ pos: 2, type: 'me' }] }
+      },
+      {
+        id: 'am-2', group: 'amida', difficulty: 'Sencillo',
+        name: 'Pent-3-enamida',
+        altNames: ['3-pentenamida'],
+        condensed: 'CH₃-CH=CH-CH₂-CONH₂',
+        parts: { suffix: '...-amida', root: 'pent-3-en (5C)', subs: ['Ninguno'] },
+        hints: ['C1 en el grupo -CONH₂.', 'Cadena de 5 carbonos con un doble enlace que inicia en C3.', 'Combina raíz + insaturación + amida: Pent-3-enamida.'],
+        explanation: '1) La amida define el C1 y el sufijo "-amida". 2) Cadena de 5 carbonos con doble enlace en C3: Pent-3-enamida.',
+        structure: { chain: 5, c1Right: true, principal: 'CONH2', bonds: [{ pos: 3, order: 2 }], subs: [] }
+      },
+      {
+        id: 'am-3', group: 'amida', difficulty: 'Sencillo',
+        name: '3,3-dimetilbutanamida',
+        altNames: [],
+        condensed: 'CH₃-C(CH₃)₂-CH₂-CONH₂',
+        parts: { suffix: '...-amida', root: 'butan (4C)', subs: ['3,3-dimetil'] },
+        hints: ['Cadena de 4 carbonos (butanamida).', 'En el C3 hay dos grupos metilo unidos al mismo carbono.', 'Usa el prefijo multiplicador "di-": 3,3-dimetilbutanamida.'],
+        explanation: '1) C1 en la amida, cadena de 4 carbonos (butanamida). 2) Dos metilos sobre el C3 requieren repetir el localizador: 3,3-dimetilbutanamida.',
+        structure: { chain: 4, c1Right: true, principal: 'CONH2', bonds: [], subs: [{ pos: 3, type: 'me' }, { pos: 3, type: 'me2' }] }
+      },
+      {
+        id: 'am-4', group: 'amida', difficulty: 'Sencillo',
+        name: '3-fenilpropanamida',
+        altNames: [],
+        condensed: 'C₆H₅-CH₂-CH₂-CONH₂',
+        parts: { suffix: '...-amida', root: 'propan (3C)', subs: ['3-fenil'] },
+        hints: ['Cadena abierta de 3 carbonos que contiene la amida (propanamida).', 'En el C3 está unido el anillo de benceno.', 'Como sustituyente el benceno se llama "fenil".'],
+        explanation: '1) La cadena principal contiene el grupo amida y tiene 3 carbonos (propanamida). 2) En el C3 se une un grupo fenil: 3-fenilpropanamida.',
+        structure: { chain: 3, c1Right: true, principal: 'CONH2', bonds: [], subs: [{ pos: 3, type: 'ph' }] }
+      },
+      {
+        id: 'am-5', group: 'amida', difficulty: 'Intermedio',
+        name: '4-hidroxi-3-metilpentanamida',
+        altNames: [],
+        condensed: 'CH₃-CH(OH)-CH(CH₃)-CH₂-CONH₂',
+        parts: { suffix: '...-amida', root: 'pentan (5C)', subs: ['4-hidroxi', '3-metil'] },
+        hints: ['La amida tiene prioridad sobre el alcohol.', 'Cadena de 5 carbonos (pentanamida).', 'En C4 hay hidroxi y en C3 metil (orden alfabético: hidroxi antes que metil).'],
+        explanation: '1) La amida (-CONH₂) es el C1. 2) El alcohol en C4 pasa a llamarse "hidroxi". 3) Orden alfabético: 4-hidroxi-3-metilpentanamida.',
+        structure: { chain: 5, c1Right: true, principal: 'CONH2', bonds: [], subs: [{ pos: 3, type: 'me' }, { pos: 4, type: 'OH' }] }
+      },
+      {
+        id: 'am-6', group: 'amida', difficulty: 'Intermedio',
+        name: '2-ciano-4-oxopentanamida',
+        altNames: [],
+        condensed: 'CH₃-CO-CH₂-CH(CN)-CONH₂',
+        parts: { suffix: '...-amida', root: 'pentan (5C)', subs: ['2-ciano', '4-oxo'] },
+        hints: ['La amida (prioridad 3°) vence al nitrilo (4°) y a la cetona (6°).', 'En C2 está el nitrilo degradado (ciano) y en C4 la cetona degradada (oxo).', 'Cadena de 5 carbonos: 2-ciano-4-oxopentanamida.'],
+        explanation: '1) La amida es el grupo principal (pentanamida). 2) Degrada al nitrilo en C2 a "ciano" y a la cetona en C4 a "oxo": 2-ciano-4-oxopentanamida.',
+        structure: { chain: 5, c1Right: true, principal: 'CONH2', bonds: [], subs: [{ pos: 2, type: 'CN' }, { pos: 4, type: 'oxo' }] }
+      },
+      {
+        id: 'am-7', group: 'amida', difficulty: 'Intermedio',
+        name: '3-ciclohexil-2-hidroxibut-3-enamida',
+        altNames: ['3-ciclohexil-2-hidroxi-3-butenamida'],
+        condensed: 'CH₂=C(C₆H₁₁)-CH(OH)-CONH₂',
+        parts: { suffix: '...-amida', root: 'but-3-en (4C)', subs: ['3-ciclohexil', '2-hidroxi'] },
+        hints: ['Cadena de 4 carbonos que incluye la amida (C1) y el doble enlace (C3=C4).', 'En C2 hay un grupo hidroxi y en C3 un ciclohexil.', 'Orden alfabético: 3-ciclohexil-2-hidroxibut-3-enamida.'],
+        explanation: '1) Cadena principal de 4 carbonos con la amida en C1 y el doble enlace en C3 (but-3-enamida). 2) En C3 hay un ciclohexil y en C2 un hidroxi.',
+        structure: { chain: 4, c1Right: true, principal: 'CONH2', bonds: [{ pos: 3, order: 2 }], subs: [{ pos: 2, type: 'OH' }, { pos: 3, type: 'chex' }] }
+      },
+      {
+        id: 'am-8', group: 'amida', difficulty: 'Admin Hacker Pro',
+        name: '5-ciano-6-ciclohexil-8-fenil-2-hidroxioct-3-inamida',
+        altNames: ['5-ciano-6-ciclohexil-8-fenil-2-hidroxi-3-octinamida'],
+        condensed: 'C₆H₅-CH₂-CH₂-CH(C₆H₁₁)-CH(CN)-C≡C-CH(OH)-CONH₂',
+        parts: { suffix: '...-amida', root: 'oct-3-in (8C)', subs: ['5-ciano', '6-ciclohexil', '8-fenil', '2-hidroxi'] },
+        hints: ['¡El tercer ejercicio clásico que vimos! La amida es C1 y la cadena tiene 8 carbonos con triple enlace en C3 (oct-3-inamida).', 'Sustituyentes: C2 hidroxi, C5 ciano, C6 ciclohexil, C8 fenil.', 'Orden alfabético: ciano -> ciclohexil -> fenil -> hidroxi.'],
+        explanation: '1) La amida define el C1 en una cadena de 8 carbonos con triple enlace en C3 (oct-3-inamida). 2) Los 4 sustituyentes se ordenan alfabéticamente: 5-ciano-6-ciclohexil-8-fenil-2-hidroxi.',
+        structure: { chain: 8, c1Right: true, principal: 'CONH2', bonds: [{ pos: 3, order: 3 }], subs: [{ pos: 2, type: 'OH' }, { pos: 5, type: 'CN' }, { pos: 6, type: 'chex' }, { pos: 8, type: 'ph' }] }
+      },
+      {
+        id: 'am-9', group: 'amida', difficulty: 'Admin Hacker Pro',
+        name: '3-amino-4-fenil-5-oxohex-2-enamida',
+        altNames: ['3-amino-4-fenil-5-oxo-2-hexenamida'],
+        condensed: 'CH₃-CO-CH(C₆H₅)-C(NH₂)=CH-CONH₂',
+        parts: { suffix: '...-amida', root: 'hex-2-en (6C)', subs: ['3-amino', '4-fenil', '5-oxo'] },
+        hints: ['Cadena de 6 carbonos con amida en C1 y doble enlace en C2 (hex-2-enamida).', 'En C3 hay amino, en C4 fenil y en C5 oxo.', 'Están en perfecto orden alfabético: 3-amino-4-fenil-5-oxohex-2-enamida.'],
+        explanation: '1) C1 en la amida, cadena de 6 carbonos con doble enlace en C2 (hex-2-enamida). 2) Sustituyentes en C3 (amino), C4 (fenil) y C5 (oxo).',
+        structure: { chain: 6, c1Right: true, principal: 'CONH2', bonds: [{ pos: 2, order: 2 }], subs: [{ pos: 3, type: 'NH2' }, { pos: 4, type: 'ph' }, { pos: 5, type: 'oxo' }] }
+      },
+      {
+        id: 'am-10', group: 'amida', difficulty: 'Admin Hacker Pro',
+        name: '4-bencil-2-ciano-3-hidroxi-6-oxoheptanamida',
+        altNames: [],
+        condensed: 'CH₃-CO-CH₂-CH(CH₂C₆H₅)-CH(OH)-CH(CN)-CONH₂',
+        parts: { suffix: '...-amida', root: 'heptan (7C)', subs: ['4-bencil', '2-ciano', '3-hidroxi', '6-oxo'] },
+        hints: ['Cadena de 7 carbonos (heptanamida) con un aldehído/cetona en C6 (oxo).', 'En C4 hay un bencil (-CH₂-Ph), en C2 ciano y en C3 hidroxi.', 'Orden alfabético: 4-bencil (B) -> 2-ciano (C) -> 3-hidroxi (H) -> 6-oxo (O).'],
+        explanation: '1) La amida es C1 en la cadena de 7 carbonos (heptanamida). 2) Orden alfabético de los cuatro prefijos: 4-bencil-2-ciano-3-hidroxi-6-oxoheptanamida.',
+        structure: { chain: 7, c1Right: true, principal: 'CONH2', bonds: [], subs: [{ pos: 2, type: 'CN' }, { pos: 3, type: 'OH' }, { pos: 4, type: 'bn' }, { pos: 6, type: 'oxo' }] }
+      },
+
+      // ===================================================================
+      // GRUPO 4: NITRILO (10 Ejercicios)
+      // ===================================================================
+      {
+        id: 'ni-1', group: 'nitrilo', difficulty: 'Sencillo',
+        name: '3-metilbutanonitrilo',
+        altNames: [],
+        condensed: 'CH₃-CH(CH₃)-CH₂-C≡N',
+        parts: { suffix: '...-nitrilo', root: 'butan (4C)', subs: ['3-metil'] },
+        hints: ['¡Importante! El carbono del grupo -C≡N SÍ se cuenta como el Carbono 1.', 'Contando el carbono del nitrilo, la cadena tiene 4 carbonos (butanonitrilo).', 'En el C3 hay un metil: 3-metilbutanonitrilo.'],
+        explanation: '1) El carbono del grupo -C≡N es el C1. 2) Cadena de 4 carbonos (butanonitrilo, manteniendo la "o" de butano). 3) Metilo en C3: 3-metilbutanonitrilo.',
+        structure: { chain: 4, c1Right: true, principal: 'CN', bonds: [], subs: [{ pos: 3, type: 'me' }] }
+      },
+      {
+        id: 'ni-2', group: 'nitrilo', difficulty: 'Sencillo',
+        name: 'Pent-3-enonitrilo',
+        altNames: ['3-pentenonitrilo'],
+        condensed: 'CH₃-CH=CH-CH₂-C≡N',
+        parts: { suffix: '...-nitrilo', root: 'pent-3-en (5C)', subs: ['Ninguno'] },
+        hints: ['C1 es el carbono del -C≡N.', 'Hay 5 carbonos en total con un doble enlace en C3.', 'Se une como: Pent-3-enonitrilo.'],
+        explanation: '1) El carbono del nitrilo es el C1. 2) Cadena de 5 carbonos con doble enlace en C3: Pent-3-enonitrilo.',
+        structure: { chain: 5, c1Right: true, principal: 'CN', bonds: [{ pos: 3, order: 2 }], subs: [] }
+      },
+      {
+        id: 'ni-3', group: 'nitrilo', difficulty: 'Sencillo',
+        name: '2-etilpentanonitrilo',
+        altNames: [],
+        condensed: 'CH₃-CH₂-CH₂-CH(CH₂CH₃)-C≡N',
+        parts: { suffix: '...-nitrilo', root: 'pentan (5C)', subs: ['2-etil'] },
+        hints: ['C1 en el nitrilo.', 'La cadena más larga que contiene al C1 tiene 5 carbonos (pentanonitrilo).', 'En el C2 queda una ramificación de 2 carbonos (2-etil).'],
+        explanation: '1) C1 es el carbono del nitrilo. 2) La cadena principal tiene 5 carbonos (pentanonitrilo) y en C2 hay un radical etil.',
+        structure: { chain: 5, c1Right: true, principal: 'CN', bonds: [], subs: [{ pos: 2, type: 'et' }] }
+      },
+      {
+        id: 'ni-4', group: 'nitrilo', difficulty: 'Sencillo',
+        name: '3-ciclopentilpropanonitrilo',
+        altNames: [],
+        condensed: 'C₅H₉-CH₂-CH₂-C≡N',
+        parts: { suffix: '...-nitrilo', root: 'propan (3C)', subs: ['3-ciclopentil'] },
+        hints: ['Cadena abierta de 3 carbonos incluyendo el carbono del nitrilo (propanonitrilo).', 'En el C3 hay un anillo de 5 carbonos (ciclopentil).', 'Nombre completo: 3-ciclopentilpropanonitrilo.'],
+        explanation: '1) La cadena principal contiene el grupo -CN y tiene 3 carbonos (propanonitrilo). 2) En C3 hay un radical ciclopentil.',
+        structure: { chain: 3, c1Right: true, principal: 'CN', bonds: [], subs: [{ pos: 3, type: 'cpent' }] }
+      },
+      {
+        id: 'ni-5', group: 'nitrilo', difficulty: 'Intermedio',
+        name: '3-hidroxi-4-metilpentanonitrilo',
+        altNames: [],
+        condensed: 'CH₃-CH(CH₃)-CH(OH)-CH₂-C≡N',
+        parts: { suffix: '...-nitrilo', root: 'pentan (5C)', subs: ['3-hidroxi', '4-metil'] },
+        hints: ['El nitrilo tiene mayor prioridad que el alcohol.', 'Cadena de 5 carbonos (pentanonitrilo).', 'Sustituyentes: 3-hidroxi y 4-metil.'],
+        explanation: '1) El grupo -C≡N es C1 y define el sufijo "-nitrilo". 2) El alcohol en C3 se degrada a "hidroxi" y en C4 hay un metil: 3-hidroxi-4-metilpentanonitrilo.',
+        structure: { chain: 5, c1Right: true, principal: 'CN', bonds: [], subs: [{ pos: 3, type: 'OH' }, { pos: 4, type: 'me' }] }
+      },
+      {
+        id: 'ni-6', group: 'nitrilo', difficulty: 'Intermedio',
+        name: '4-oxo-2-fenilpentanonitrilo',
+        altNames: ['2-fenil-4-oxopentanonitrilo'],
+        condensed: 'CH₃-CO-CH₂-CH(C₆H₅)-C≡N',
+        parts: { suffix: '...-nitrilo', root: 'pentan (5C)', subs: ['2-fenil', '4-oxo'] },
+        hints: ['El nitrilo (4° en prioridad) le gana a la cetona (6°).', 'En C2 hay un fenil y en C4 un grupo oxo.', 'Orden alfabético: fenil (F) antes que oxo (O) -> 2-fenil-4-oxopentanonitrilo.'],
+        acceptCanonical: '2-fenil-4-oxopentanonitrilo',
+        explanation: '1) El nitrilo es el grupo principal (pentanonitrilo). 2) La cetona en C4 se nombra como "oxo" y el benceno en C2 como "fenil". Alfabéticamente: 2-fenil-4-oxopentanonitrilo.',
+        structure: { chain: 5, c1Right: true, principal: 'CN', bonds: [], subs: [{ pos: 2, type: 'ph' }, { pos: 4, type: 'oxo' }] }
+      },
+      {
+        id: 'ni-7', group: 'nitrilo', difficulty: 'Intermedio',
+        name: '2-amino-3-ciclohexilbutanonitrilo',
+        altNames: [],
+        condensed: 'CH₃-CH(C₆H₁₁)-CH(NH₂)-C≡N',
+        parts: { suffix: '...-nitrilo', root: 'butan (4C)', subs: ['2-amino', '3-ciclohexil'] },
+        hints: ['C1 es el carbono del nitrilo en una cadena de 4 carbonos (butanonitrilo).', 'En C2 hay un grupo amino y en C3 un ciclohexil.', 'Orden alfabético: 2-amino-3-ciclohexilbutanonitrilo.'],
+        explanation: '1) El nitrilo define el C1 y la cadena de 4 carbonos (butanonitrilo). 2) En C2 hay amino y en C3 ciclohexil.',
+        structure: { chain: 4, c1Right: true, principal: 'CN', bonds: [], subs: [{ pos: 2, type: 'NH2' }, { pos: 3, type: 'chex' }] }
+      },
+      {
+        id: 'ni-8', group: 'nitrilo', difficulty: 'Admin Hacker Pro',
+        name: '3-bencil-2-hidroxi-5-oxohex-3-enonitrilo',
+        altNames: ['3-bencil-2-hidroxi-5-oxo-3-hexenonitrilo'],
+        condensed: 'CH₃-CO-CH=C(CH₂C₆H₅)-CH(OH)-C≡N',
+        parts: { suffix: '...-nitrilo', root: 'hex-3-en (6C)', subs: ['3-bencil', '2-hidroxi', '5-oxo'] },
+        hints: ['El nitrilo es C1. Cadena de 6 carbonos con doble enlace en C3 (hex-3-enonitrilo).', 'Sustituyentes: en C2 hidroxi, en C3 bencil (-CH₂-C₆H₅) y en C5 oxo.', 'Orden alfabético: 3-bencil -> 2-hidroxi -> 5-oxo.'],
+        explanation: '1) C1 en el nitrilo con cadena de 6 carbonos y doble enlace en C3 (hex-3-enonitrilo). 2) Tres sustituyentes en orden alfabético: 3-bencil-2-hidroxi-5-oxo.',
+        structure: { chain: 6, c1Right: true, principal: 'CN', bonds: [{ pos: 3, order: 2 }], subs: [{ pos: 2, type: 'OH' }, { pos: 3, type: 'bn' }, { pos: 5, type: 'oxo' }] }
+      },
+      {
+        id: 'ni-9', group: 'nitrilo', difficulty: 'Admin Hacker Pro',
+        name: '4-ciclohexil-3-fenil-2-hidroxihept-6-en-4-inonitrilo',
+        altNames: ['4-ciclohexil-3-fenil-2-hidroxi-6-hepten-4-inonitrilo'],
+        condensed: 'CH₂=CH-C≡C-CH(C₆H₁₁)-CH(C₆H₅)-CH(OH)-C≡N',
+        parts: { suffix: '...-nitrilo', root: 'hept-6-en-4-in (7C)', subs: ['3-fenil', '2-hidroxi', '4-ciclohexil'] },
+        hints: ['Miremos con cuidado la cadena de 8 carbonos: C1(-CN)-C2(OH)-C3(Ph)-C4(Chex)-C5≡C6-C7=C8.', 'Con 8 carbonos es oct-7-en-5-inonitrilo.', 'Sustituyentes en C2 (hidroxi), C3 (fenil) y C4 (ciclohexil) -> 4-ciclohexil-3-fenil-2-hidroxioct-7-en-5-inonitrilo.'],
+        name: '4-ciclohexil-3-fenil-2-hidroxioct-7-en-5-inonitrilo',
+        altNames: ['4-ciclohexil-3-fenil-2-hidroxi-7-octen-5-inonitrilo'],
+        parts: { suffix: '...-nitrilo', root: 'oct-7-en-5-in (8C)', subs: ['4-ciclohexil', '3-fenil', '2-hidroxi'] },
+        explanation: '1) Cadena de 8 carbonos iniciando en el nitrilo C1 (oct-7-en-5-inonitrilo). 2) Sustituyentes ordenados alfabéticamente: 4-ciclohexil (C), 3-fenil (F) y 2-hidroxi (H).',
+        structure: { chain: 8, c1Right: true, principal: 'CN', bonds: [{ pos: 5, order: 3 }, { pos: 7, order: 2 }], subs: [{ pos: 2, type: 'OH' }, { pos: 3, type: 'ph' }, { pos: 4, type: 'chex' }] }
+      },
+      {
+        id: 'ni-10', group: 'nitrilo', difficulty: 'Admin Hacker Pro',
+        name: '2-amino-4-formil-3-fenil-5-oxohexanonitrilo',
+        altNames: ['2-amino-3-fenil-4-formil-5-oxohexanonitrilo'],
+        condensed: 'CH₃-CO-CH(CHO)-CH(C₆H₅)-CH(NH₂)-C≡N',
+        parts: { suffix: '...-nitrilo', root: 'hexan (6C)', subs: ['2-amino', '3-fenil', '4-formil', '5-oxo'] },
+        hints: ['El nitrilo vence tanto al aldehído como a la cetona.', 'La cadena de 6 carbonos incluye a la cetona en C5 (oxo), y en C4 hay un grupo -CHO ramificado llamado "formil".', 'Orden alfabético: 2-amino -> 3-fenil -> 4-formil -> 5-oxo.'],
+        acceptCanonical: '2-amino-3-fenil-4-formil-5-oxohexanonitrilo',
+        explanation: '1) El nitrilo es C1 en la cadena de 6 carbonos (hexanonitrilo). 2) En C2 hay amino, en C3 fenil, en C4 un aldehído ramificado (formil) y en C5 una cetona (oxo). Alfabéticamente: fenil (f-e) va antes que formil (f-o).',
+        structure: { chain: 6, c1Right: true, principal: 'CN', bonds: [], subs: [{ pos: 2, type: 'NH2' }, { pos: 3, type: 'ph' }, { pos: 4, type: 'CHO' }, { pos: 5, type: 'oxo' }] }
+      },
+
+      // ===================================================================
+      // GRUPO 5: ALDEHÍDO (10 Ejercicios)
+      // ===================================================================
+      {
+        id: 'al-1', group: 'aldehido', difficulty: 'Sencillo',
+        name: '2-metilbutanal',
+        altNames: [],
+        condensed: 'CH₃-CH₂-CH(CH₃)-CHO',
+        parts: { suffix: '...-al', root: 'butan (4C)', subs: ['2-metil'] },
+        hints: ['El grupo aldehído (-CHO) siempre es el Carbono 1.', 'Cadena principal de 4 carbonos (butanal).', 'En el C2 hay un radical metil: 2-metilbutanal.'],
+        explanation: '1) El grupo -CHO define el C1 y el sufijo "-al". 2) Cadena de 4 carbonos con un metilo en C2: 2-metilbutanal.',
+        structure: { chain: 4, c1Right: true, principal: 'CHO', bonds: [], subs: [{ pos: 2, type: 'me' }] }
+      },
+      {
+        id: 'al-2', group: 'aldehido', difficulty: 'Sencillo',
+        name: 'Hex-4-enal',
+        altNames: ['4-hexenal'],
+        condensed: 'CH₃-CH=CH-CH₂-CH₂-CHO',
+        parts: { suffix: '...-al', root: 'hex-4-en (6C)', subs: ['Ninguno'] },
+        hints: ['C1 es el carbono del -CHO.', 'Cadena de 6 carbonos con un doble enlace que inicia en C4.', 'Une raíz + doble enlace + sufijo: Hex-4-enal.'],
+        explanation: '1) El aldehído es el C1. 2) Cadena lineal de 6 carbonos con doble enlace en C4: Hex-4-enal.',
+        structure: { chain: 6, c1Right: true, principal: 'CHO', bonds: [{ pos: 4, order: 2 }], subs: [] }
+      },
+      {
+        id: 'al-3', group: 'aldehido', difficulty: 'Sencillo',
+        name: '3-etil-4-metilpentanal',
+        altNames: [],
+        condensed: 'CH₃-CH(CH₃)-CH(CH₂CH₃)-CH₂-CHO',
+        parts: { suffix: '...-al', root: 'pentan (5C)', subs: ['3-etil', '4-metil'] },
+        hints: ['C1 en el grupo -CHO.', 'Cadena de 5 carbonos (pentanal).', 'En C3 hay un etil y en C4 un metil: 3-etil-4-metilpentanal.'],
+        explanation: '1) C1 en el aldehído, cadena de 5 carbonos (pentanal). 2) Orden alfabético de radicales: 3-etil antes que 4-metil.',
+        structure: { chain: 5, c1Right: true, principal: 'CHO', bonds: [], subs: [{ pos: 3, type: 'et' }, { pos: 4, type: 'me' }] }
+      },
+      {
+        id: 'al-4', group: 'aldehido', difficulty: 'Sencillo',
+        name: '3-fenilpropanal',
+        altNames: [],
+        condensed: 'C₆H₅-CH₂-CH₂-CHO',
+        parts: { suffix: '...-al', root: 'propan (3C)', subs: ['3-fenil'] },
+        hints: ['La cadena con el -CHO tiene 3 carbonos (propanal).', 'En el C3 hay un anillo de benceno unido directamente (fenil).', 'Nombre: 3-fenilpropanal.'],
+        explanation: '1) Cadena principal de 3 carbonos terminada en -CHO (propanal). 2) En el C3 está unido el radical fenil: 3-fenilpropanal.',
+        structure: { chain: 3, c1Right: true, principal: 'CHO', bonds: [], subs: [{ pos: 3, type: 'ph' }] }
+      },
+      {
+        id: 'al-5', group: 'aldehido', difficulty: 'Intermedio',
+        name: '3-ciclohexilpent-4-inal',
+        altNames: ['3-ciclohexil-4-pentinal'],
+        condensed: 'CH≡C-CH(C₆H₁₁)-CH₂-CHO',
+        parts: { suffix: '...-al', root: 'pent-4-in (5C)', subs: ['3-ciclohexil'] },
+        hints: ['¡Uno de los tres ejercicios modelo que revisamos! El aldehído (-CHO) es el C1.', 'Cadena de 5 carbonos que incluye el triple enlace en C4 (pent-4-inal).', 'En el C3 hay un anillo saturado de 6 carbonos (ciclohexil).'],
+        explanation: '1) El aldehído (-CHO) tiene prioridad sobre el alquino y define el C1. 2) Cadena de 5 carbonos con triple enlace en C4 (pent-4-inal). 3) En C3 hay un radical ciclohexil.',
+        structure: { chain: 5, c1Right: true, principal: 'CHO', bonds: [{ pos: 4, order: 3 }], subs: [{ pos: 3, type: 'chex' }] }
+      },
+      {
+        id: 'al-6', group: 'aldehido', difficulty: 'Intermedio',
+        name: '3-hidroxi-4-oxopentanal',
+        altNames: [],
+        condensed: 'CH₃-CO-CH(OH)-CH₂-CHO',
+        parts: { suffix: '...-al', root: 'pentan (5C)', subs: ['3-hidroxi', '4-oxo'] },
+        hints: ['El aldehído (5°) le gana a la cetona (6°) y al alcohol (7°).', 'En C3 hay un alcohol degradado (hidroxi) y en C4 una cetona degradada (oxo).', 'Cadena de 5 carbonos: 3-hidroxi-4-oxopentanal.'],
+        explanation: '1) El aldehído es el C1 y define el sufijo "-al". 2) En C3 está el grupo hidroxi y en C4 el grupo oxo: 3-hidroxi-4-oxopentanal.',
+        structure: { chain: 5, c1Right: true, principal: 'CHO', bonds: [], subs: [{ pos: 3, type: 'OH' }, { pos: 4, type: 'oxo' }] }
+      },
+      {
+        id: 'al-7', group: 'aldehido', difficulty: 'Intermedio',
+        name: '2-amino-4-fenilbut-3-enal',
+        altNames: ['2-amino-4-fenil-3-butenal'],
+        condensed: 'C₆H₅-CH=CH-CH(NH₂)-CHO',
+        parts: { suffix: '...-al', root: 'but-3-en (4C)', subs: ['2-amino', '4-fenil'] },
+        hints: ['C1 en el aldehído. Cadena de 4 carbonos con doble enlace en C3 (but-3-enal).', 'En C2 hay un grupo amino y en C4 un fenil.', 'Orden alfabético: 2-amino-4-fenilbut-3-enal.'],
+        explanation: '1) Cadena de 4 carbonos con el aldehído en C1 y doble enlace en C3 (but-3-enal). 2) Sustituyentes en C2 (amino) y C4 (fenil).',
+        structure: { chain: 4, c1Right: true, principal: 'CHO', bonds: [{ pos: 3, order: 2 }], subs: [{ pos: 2, type: 'NH2' }, { pos: 4, type: 'ph' }] }
+      },
+      {
+        id: 'al-8', group: 'aldehido', difficulty: 'Admin Hacker Pro',
+        name: '3-bencil-2-hidroxi-5-oxohex-3-enal',
+        altNames: ['3-bencil-2-hidroxi-5-oxo-3-hexenal'],
+        condensed: 'CH₃-CO-CH=C(CH₂C₆H₅)-CH(OH)-CHO',
+        parts: { suffix: '...-al', root: 'hex-3-en (6C)', subs: ['3-bencil', '2-hidroxi', '5-oxo'] },
+        hints: ['El aldehído (-CHO) es C1 en la cadena de 6 carbonos con doble enlace en C3 (hex-3-enal).', 'Sustituyentes: en C2 hidroxi, en C3 bencil y en C5 oxo.', 'Orden alfabético: 3-bencil -> 2-hidroxi -> 5-oxo.'],
+        explanation: '1) El grupo -CHO define el C1 en la cadena de 6 carbonos (hex-3-enal). 2) Sustituyentes ordenados alfabéticamente: 3-bencil-2-hidroxi-5-oxohex-3-enal.',
+        structure: { chain: 6, c1Right: true, principal: 'CHO', bonds: [{ pos: 3, order: 2 }], subs: [{ pos: 2, type: 'OH' }, { pos: 3, type: 'bn' }, { pos: 5, type: 'oxo' }] }
+      },
+      {
+        id: 'al-9', group: 'aldehido', difficulty: 'Admin Hacker Pro',
+        name: '4-ciclohexil-2-fenil-3-hidroxihept-6-en-4-inal',
+        altNames: ['4-ciclohexil-2-fenil-3-hidroxioct-7-en-5-inal', '4-ciclohexil-2-fenil-3-hidroxi-7-octen-5-inal'],
+        condensed: 'CH₂=CH-C≡C-CH(C₆H₁₁)-CH(OH)-CH(C₆H₅)-CHO',
+        name: '4-ciclohexil-2-fenil-3-hidroxioct-7-en-5-inal',
+        parts: { suffix: '...-al', root: 'oct-7-en-5-in (8C)', subs: ['4-ciclohexil', '2-fenil', '3-hidroxi'] },
+        hints: ['Cadena de 8 carbonos empezando en el aldehído C1 (oct-7-en-5-inal).', 'Sustituyentes: C2 fenil, C3 hidroxi, C4 ciclohexil.', 'Orden alfabético: 4-ciclohexil (C) -> 2-fenil (F) -> 3-hidroxi (H).'],
+        explanation: '1) C1 en el aldehído, cadena de 8 carbonos con doble enlace en C7 y triple en C5 (oct-7-en-5-inal). 2) Prefijos en orden alfabético: 4-ciclohexil-2-fenil-3-hidroxi.',
+        structure: { chain: 8, c1Right: true, principal: 'CHO', bonds: [{ pos: 5, order: 3 }, { pos: 7, order: 2 }], subs: [{ pos: 2, type: 'ph' }, { pos: 3, type: 'OH' }, { pos: 4, type: 'chex' }] }
+      },
+      {
+        id: 'al-10', group: 'aldehido', difficulty: 'Admin Hacker Pro',
+        name: '2-amino-4-bromo-3-fenil-5-oxohexanal',
+        altNames: [],
+        condensed: 'CH₃-CO-CH(Br)-CH(C₆H₅)-CH(NH₂)-CHO',
+        parts: { suffix: '...-al', root: 'hexan (6C)', subs: ['2-amino', '4-bromo', '3-fenil', '5-oxo'] },
+        hints: ['C1 es el aldehído (-CHO) en una cadena de 6 carbonos (hexanal).', 'Cuatro sustituyentes: C2 amino, C3 fenil, C4 bromo, C5 oxo.', 'Orden alfabético: 2-amino (A) -> 4-bromo (B) -> 3-fenil (F) -> 5-oxo (O).'],
+        explanation: '1) El aldehído es C1 (hexanal). 2) Los cuatro sustituyentes se ordenan alfabéticamente sin importar su número de localizador: 2-amino-4-bromo-3-fenil-5-oxohexanal.',
+        structure: { chain: 6, c1Right: true, principal: 'CHO', bonds: [], subs: [{ pos: 2, type: 'NH2' }, { pos: 3, type: 'ph' }, { pos: 4, type: 'Br' }, { pos: 5, type: 'oxo' }] }
+      },
+
+      // ===================================================================
+      // GRUPO 6: CETONA (10 Ejercicios)
+      // ===================================================================
+      {
+        id: 'ce-1', group: 'cetona', difficulty: 'Sencillo',
+        name: '4-metilpentan-2-ona',
+        altNames: ['4-metil-2-pentanona'],
+        condensed: 'CH₃-CH(CH₃)-CH₂-CO-CH₃',
+        parts: { suffix: '...-2-ona', root: 'pentan (5C)', subs: ['4-metil'] },
+        hints: ['Numera la cadena para darle a la cetona (=O) el número más bajo posible (C2 desde la derecha).', 'Cadena de 5 carbonos (pentan-2-ona).', 'En el C4 hay un metil: 4-metilpentan-2-ona.'],
+        explanation: '1) Se numera desde el extremo derecho para que el carbonilo cetónico quede en C2 (pentan-2-ona). 2) En C4 queda el metil: 4-metilpentan-2-ona.',
+        structure: { chain: 5, c1Right: true, principal: 'ketone', ketonePos: 2, bonds: [], subs: [{ pos: 2, type: 'oxo' }, { pos: 4, type: 'me' }] }
+      },
+      {
+        id: 'ce-2', group: 'cetona', difficulty: 'Sencillo',
+        name: 'Hex-4-en-2-ona',
+        altNames: ['4-hexen-2-ona'],
+        condensed: 'CH₃-CH=CH-CH₂-CO-CH₃',
+        parts: { suffix: '...-2-ona', root: 'hex-4-en (6C)', subs: ['Ninguno'] },
+        hints: ['La cetona tiene prioridad sobre el doble enlace para numerar.', 'Empezando por la derecha, la cetona está en C2 y el doble enlace en C4.', 'Nombre: Hex-4-en-2-ona.'],
+        explanation: '1) La cetona define la numeración desde la derecha (posición 2). 2) Cadena de 6 carbonos con doble enlace en C4: Hex-4-en-2-ona.',
+        structure: { chain: 6, c1Right: true, principal: 'ketone', ketonePos: 2, bonds: [{ pos: 4, order: 2 }], subs: [{ pos: 2, type: 'oxo' }] }
+      },
+      {
+        id: 'ce-3', group: 'cetona', difficulty: 'Sencillo',
+        name: '4-etilhexan-3-ona',
+        altNames: ['4-etil-3-hexanona'],
+        condensed: 'CH₃-CH₂-CH(CH₂CH₃)-CO-CH₂-CH₃',
+        parts: { suffix: '...-3-ona', root: 'hexan (6C)', subs: ['4-etil'] },
+        hints: ['Empezando por la derecha, el grupo cetona está en el C3 (hexan-3-ona).', 'En el C4 hay una ramificación de 2 carbonos (etil).', 'Nombre: 4-etilhexan-3-ona.'],
+        explanation: '1) Numerando desde la derecha, la cetona recibe el localizador 3 (si fuera por la izquierda sería 4). 2) En C4 hay un grupo etil: 4-etilhexan-3-ona.',
+        structure: { chain: 6, c1Right: true, principal: 'ketone', ketonePos: 3, bonds: [], subs: [{ pos: 3, type: 'oxo' }, { pos: 4, type: 'et' }] }
+      },
+      {
+        id: 'ce-4', group: 'cetona', difficulty: 'Sencillo',
+        name: '1-fenilbutan-2-ona',
+        altNames: ['1-fenil-2-butanona'],
+        condensed: 'CH₃-CH₂-CO-CH₂-C₆H₅',
+        parts: { suffix: '...-2-ona', root: 'butan (4C)', subs: ['1-fenil'] },
+        hints: ['Empezando por la derecha, la cetona queda en C2 (butan-2-ona).', 'En el carbono 1 está unido un anillo de benceno (1-fenil).', 'Nombre: 1-fenilbutan-2-ona.'],
+        explanation: '1) La cadena abierta de 4 carbonos se numera desde la derecha para que la cetona esté en C2 (butan-2-ona). 2) En el C1 hay un radical fenil: 1-fenilbutan-2-ona.',
+        structure: { chain: 4, c1Right: true, principal: 'ketone', ketonePos: 2, bonds: [], subs: [{ pos: 1, type: 'ph' }, { pos: 2, type: 'oxo' }] }
+      },
+      {
+        id: 'ce-5', group: 'cetona', difficulty: 'Intermedio',
+        name: '5-hidroxi-3-metilpent-3-en-2-ona',
+        altNames: ['5-hidroxi-3-metil-3-penten-2-ona'],
+        condensed: 'HO-CH₂-CH=C(CH₃)-CO-CH₃',
+        parts: { suffix: '...-2-ona', root: 'pent-3-en (5C)', subs: ['5-hidroxi', '3-metil'] },
+        hints: ['¡El primer ejercicio que repasamos juntos! La cetona le gana al alcohol y al doble enlace.', 'Numeramos desde el extremo de la cetona (C2). El doble enlace queda en C3 y el alcohol en C5.', 'Orden alfabético: 5-hidroxi-3-metilpent-3-en-2-ona.'],
+        explanation: '1) La cetona tiene prioridad sobre el alcohol (-OH) y define la numeración (C2). 2) Cadena de 5 carbonos con doble enlace en C3 (pent-3-en-2-ona). 3) En C5 hay hidroxi y en C3 metil.',
+        structure: { chain: 5, c1Right: true, principal: 'ketone', ketonePos: 2, bonds: [{ pos: 3, order: 2 }], subs: [{ pos: 2, type: 'oxo' }, { pos: 3, type: 'me' }, { pos: 5, type: 'OH' }] }
+      },
+      {
+        id: 'ce-6', group: 'cetona', difficulty: 'Intermedio',
+        name: '4-amino-5-fenilhexan-2-ona',
+        altNames: ['4-amino-5-fenil-2-hexanona'],
+        condensed: 'CH₃-CH(C₆H₅)-CH(NH₂)-CH₂-CO-CH₃',
+        parts: { suffix: '...-2-ona', root: 'hexan (6C)', subs: ['4-amino', '5-fenil'] },
+        hints: ['La cetona en C2 manda sobre la amina.', 'Cadena de 6 carbonos (hexan-2-ona).', 'En C4 hay amino y en C5 fenil: 4-amino-5-fenilhexan-2-ona.'],
+        explanation: '1) Numeramos desde la derecha para tener la cetona en C2 (hexan-2-ona). 2) Sustituyentes en C4 (amino) y C5 (fenil).',
+        structure: { chain: 6, c1Right: true, principal: 'ketone', ketonePos: 2, bonds: [], subs: [{ pos: 2, type: 'oxo' }, { pos: 4, type: 'NH2' }, { pos: 5, type: 'ph' }] }
+      },
+      {
+        id: 'ce-7', group: 'cetona', difficulty: 'Intermedio',
+        name: '4-ciclohexil-3-hidroxibutan-2-ona',
+        altNames: ['4-ciclohexil-3-hidroxi-2-butanona'],
+        condensed: 'C₆H₁₁-CH₂-CH(OH)-CO-CH₃',
+        parts: { suffix: '...-2-ona', root: 'butan (4C)', subs: ['4-ciclohexil', '3-hidroxi'] },
+        hints: ['Cetona en C2 de una cadena de 4 carbonos (butan-2-ona).', 'En C3 hay un alcohol degradado (hidroxi) y en C4 un ciclohexil.', 'Orden alfabético: 4-ciclohexil-3-hidroxibutan-2-ona.'],
+        explanation: '1) Cadena de 4 carbonos con cetona en C2 (butan-2-ona). 2) En C4 hay un ciclohexil y en C3 un hidroxi. Alfabéticamente: ciclohexil (C) precede a hidroxi (H).',
+        structure: { chain: 4, c1Right: true, principal: 'ketone', ketonePos: 2, bonds: [], subs: [{ pos: 2, type: 'oxo' }, { pos: 3, type: 'OH' }, { pos: 4, type: 'chex' }] }
+      },
+      {
+        id: 'ce-8', group: 'cetona', difficulty: 'Admin Hacker Pro',
+        name: '5-fenil-4-hidroxihept-6-en-2-ona',
+        altNames: ['5-fenil-4-hidroxi-6-hepten-2-ona'],
+        condensed: 'CH₂=CH-CH(C₆H₅)-CH(OH)-CH₂-CO-CH₃',
+        parts: { suffix: '...-2-ona', root: 'hept-6-en (7C)', subs: ['5-fenil', '4-hidroxi'] },
+        hints: ['Cetona en C2 de una cadena de 7 carbonos con doble enlace terminal en C6 (hept-6-en-2-ona).', 'En C4 hay hidroxi y en C5 fenil.', 'Orden alfabético: 5-fenil (F) antes que 4-hidroxi (H).'],
+        explanation: '1) La cetona en C2 numera la cadena de 7 carbonos con doble enlace en C6 (hept-6-en-2-ona). 2) Sustituyentes en orden alfabético: 5-fenil-4-hidroxi.',
+        structure: { chain: 7, c1Right: true, principal: 'ketone', ketonePos: 2, bonds: [{ pos: 6, order: 2 }], subs: [{ pos: 2, type: 'oxo' }, { pos: 4, type: 'OH' }, { pos: 5, type: 'ph' }] }
+      },
+      {
+        id: 'ce-9', group: 'cetona', difficulty: 'Admin Hacker Pro',
+        name: '3-bencil-6-ciclohexil-5-hidroxihex-3-en-2-ona',
+        altNames: ['3-bencil-6-ciclohexil-5-hidroxi-3-hexen-2-ona'],
+        condensed: 'C₆H₁₁-CH₂-CH(OH)-CH=C(CH₂C₆H₅)-CO-CH₃',
+        parts: { suffix: '...-2-ona', root: 'hex-3-en (6C)', subs: ['3-bencil', '6-ciclohexil', '5-hidroxi'] },
+        hints: ['Cetona en C2, doble enlace en C3, cadena de 6 carbonos (hex-3-en-2-ona).', 'En C3 hay un bencil (-CH₂-Ph), en C5 un hidroxi y en C6 un ciclohexil.', 'Orden alfabético: 3-bencil (B) -> 6-ciclohexil (C) -> 5-hidroxi (H).'],
+        explanation: '1) Cadena de 6 carbonos con cetona en C2 y doble enlace en C3 (hex-3-en-2-ona). 2) Tres sustituyentes en orden alfabético: 3-bencil-6-ciclohexil-5-hidroxi.',
+        structure: { chain: 6, c1Right: true, principal: 'ketone', ketonePos: 2, bonds: [{ pos: 3, order: 2 }], subs: [{ pos: 2, type: 'oxo' }, { pos: 3, type: 'bn' }, { pos: 5, type: 'OH' }, { pos: 6, type: 'chex' }] }
+      },
+      {
+        id: 'ce-10', group: 'cetona', difficulty: 'Admin Hacker Pro',
+        name: '6-amino-3-fenil-5-hidroxioct-7-in-2-ona',
+        altNames: ['6-amino-3-fenil-5-hidroxi-7-octin-2-ona'],
+        condensed: 'CH≡C-CH(NH₂)-CH(OH)-CH₂-CH(C₆H₅)-CO-CH₃',
+        parts: { suffix: '...-2-ona', root: 'oct-7-in (8C)', subs: ['6-amino', '3-fenil', '5-hidroxi'] },
+        hints: ['Cetona en C2 de una cadena de 8 carbonos con triple enlace en C7 (oct-7-in-2-ona).', 'Sustituyentes: C3 fenil, C5 hidroxi, C6 amino.', 'Orden alfabético: 6-amino -> 3-fenil -> 5-hidroxi.'],
+        explanation: '1) La cetona define el C2 en la cadena de 8 carbonos con triple enlace en C7 (oct-7-in-2-ona). 2) Orden alfabético de prefijos: 6-amino-3-fenil-5-hidroxi.',
+        structure: { chain: 8, c1Right: true, principal: 'ketone', ketonePos: 2, bonds: [{ pos: 7, order: 3 }], subs: [{ pos: 2, type: 'oxo' }, { pos: 3, type: 'ph' }, { pos: 5, type: 'OH' }, { pos: 6, type: 'NH2' }] }
+      },
+
+      // ===================================================================
+      // GRUPO 7: ALCOHOL (10 Ejercicios)
+      // ===================================================================
+      {
+        id: 'oh-1', group: 'alcohol', difficulty: 'Sencillo',
+        name: '3-metilbutan-1-ol',
+        altNames: ['3-metil-1-butanol'],
+        condensed: 'CH₃-CH(CH₃)-CH₂-CH₂-OH',
+        parts: { suffix: '...-1-ol', root: 'butan (4C)', subs: ['3-metil'] },
+        hints: ['El carbono unido al -OH recibe el número más bajo posible (C1 a la derecha).', 'Cadena de 4 carbonos (butan-1-ol).', 'En C3 hay un metil: 3-metilbutan-1-ol.'],
+        explanation: '1) El alcohol (-OH) define el C1 en el extremo derecho (butan-1-ol). 2) En C3 hay un radical metil: 3-metilbutan-1-ol.',
+        structure: { chain: 4, c1Right: true, principal: 'OH_term', bonds: [], subs: [{ pos: 3, type: 'me' }] }
+      },
+      {
+        id: 'oh-2', group: 'alcohol', difficulty: 'Sencillo',
+        name: 'Pent-3-en-2-ol',
+        altNames: ['3-penten-2-ol'],
+        condensed: 'CH₃-CH=CH-CH(OH)-CH₃',
+        parts: { suffix: '...-2-ol', root: 'pent-3-en (5C)', subs: ['Ninguno'] },
+        hints: ['El alcohol (-OH) tiene prioridad sobre el doble enlace para numerar.', 'Empezando por la derecha, el -OH está en C2 y el doble enlace en C3.', 'Nombre: Pent-3-en-2-ol.'],
+        explanation: '1) El grupo -OH tiene prioridad sobre el alqueno, numerándose desde la derecha (posición 2). 2) Doble enlace en C3: Pent-3-en-2-ol.',
+        structure: { chain: 5, c1Right: true, principal: 'OH_chain', bonds: [{ pos: 3, order: 2 }], subs: [{ pos: 2, type: 'OH' }] }
+      },
+      {
+        id: 'oh-3', group: 'alcohol', difficulty: 'Sencillo',
+        name: '3-etilpentan-2-ol',
+        altNames: ['3-etil-2-pentanol'],
+        condensed: 'CH₃-CH₂-CH(CH₂CH₃)-CH(OH)-CH₃',
+        parts: { suffix: '...-2-ol', root: 'pentan (5C)', subs: ['3-etil'] },
+        hints: ['Numerando desde la derecha, el alcohol está en C2 (pentan-2-ol).', 'En el C3 hay un grupo etil.', 'Nombre: 3-etilpentan-2-ol.'],
+        explanation: '1) Cadena de 5 carbonos numerada desde la derecha para que el -OH esté en C2 (pentan-2-ol). 2) En C3 hay un radical etil.',
+        structure: { chain: 5, c1Right: true, principal: 'OH_chain', bonds: [], subs: [{ pos: 2, type: 'OH' }, { pos: 3, type: 'et' }] }
+      },
+      {
+        id: 'oh-4', group: 'alcohol', difficulty: 'Sencillo',
+        name: '2-ciclohexiletan-1-ol',
+        altNames: ['2-ciclohexiletanol', '2-ciclohexil-1-etanol'],
+        condensed: 'C₆H₁₁-CH₂-CH₂-OH',
+        parts: { suffix: '...-1-ol', root: 'etan (2C)', subs: ['2-ciclohexil'] },
+        hints: ['La cadena con el grupo -OH tiene 2 carbonos (etan-1-ol).', 'En el C2 está unido un anillo saturado de 6 carbonos (ciclohexil).', 'Nombre: 2-ciclohexiletan-1-ol.'],
+        explanation: '1) La cadena principal contiene el grupo funcional -OH y tiene 2 carbonos (etan-1-ol). 2) En C2 se une un grupo ciclohexil.',
+        structure: { chain: 2, c1Right: true, principal: 'OH_term', bonds: [], subs: [{ pos: 2, type: 'chex' }] }
+      },
+      {
+        id: 'oh-5', group: 'alcohol', difficulty: 'Intermedio',
+        name: '3-amino-4-fenilbutan-2-ol',
+        altNames: ['3-amino-4-fenil-2-butanol'],
+        condensed: 'C₆H₅-CH₂-CH(NH₂)-CH(OH)-CH₃',
+        parts: { suffix: '...-2-ol', root: 'butan (4C)', subs: ['3-amino', '4-fenil'] },
+        hints: ['El alcohol (-OH) tiene mayor prioridad que la amina (-NH₂).', 'Cadena de 4 carbonos con el alcohol en C2 (butan-2-ol).', 'En C3 hay amino y en C4 fenil: 3-amino-4-fenilbutan-2-ol.'],
+        explanation: '1) El alcohol vence a la amina y fija la numeración desde la derecha (butan-2-ol). 2) En C3 hay amino y en C4 fenil.',
+        structure: { chain: 4, c1Right: true, principal: 'OH_chain', bonds: [], subs: [{ pos: 2, type: 'OH' }, { pos: 3, type: 'NH2' }, { pos: 4, type: 'ph' }] }
+      },
+      {
+        id: 'oh-6', group: 'alcohol', difficulty: 'Intermedio',
+        name: '4-ciclopentilpent-4-en-2-ol',
+        altNames: ['4-ciclopentil-4-penten-2-ol'],
+        condensed: 'CH₂=C(C₅H₉)-CH₂-CH(OH)-CH₃',
+        parts: { suffix: '...-2-ol', root: 'pent-4-en (5C)', subs: ['4-ciclopentil'] },
+        hints: ['El alcohol en C2 define el sentido de numeración.', 'Cadena de 5 carbonos con doble enlace en C4 (pent-4-en-2-ol).', 'En C4 también hay un radical ciclopentil.'],
+        explanation: '1) Numeración desde la derecha por el -OH en C2. 2) Cadena de 5 carbonos con doble enlace en C4 (pent-4-en-2-ol) y un ciclopentil en C4.',
+        structure: { chain: 5, c1Right: true, principal: 'OH_chain', bonds: [{ pos: 4, order: 2 }], subs: [{ pos: 2, type: 'OH' }, { pos: 4, type: 'cpent' }] }
+      },
+      {
+        id: 'oh-7', group: 'alcohol', difficulty: 'Intermedio',
+        name: '4-bromo-3-fenilhex-5-in-2-ol',
+        altNames: ['4-bromo-3-fenil-5-hexin-2-ol'],
+        condensed: 'CH≡C-CH(Br)-CH(C₆H₅)-CH(OH)-CH₃',
+        parts: { suffix: '...-2-ol', root: 'hex-5-in (6C)', subs: ['4-bromo', '3-fenil'] },
+        hints: ['Alcohol en C2 de una cadena de 6 carbonos con triple enlace en C5 (hex-5-in-2-ol).', 'En C3 hay fenil y en C4 bromo.', 'Orden alfabético: 4-bromo (B) antes que 3-fenil (F).'],
+        explanation: '1) El alcohol en C2 domina la numeración de los 6 carbonos (hex-5-in-2-ol). 2) Alfabéticamente: 4-bromo precede a 3-fenil.',
+        structure: { chain: 6, c1Right: true, principal: 'OH_chain', bonds: [{ pos: 5, order: 3 }], subs: [{ pos: 2, type: 'OH' }, { pos: 3, type: 'ph' }, { pos: 4, type: 'Br' }] }
+      },
+      {
+        id: 'oh-8', group: 'alcohol', difficulty: 'Admin Hacker Pro',
+        name: '3-amino-5-ciclohexil-4-fenilhept-6-en-2-ol',
+        altNames: ['3-amino-5-ciclohexil-4-fenil-6-hepten-2-ol'],
+        condensed: 'CH₂=CH-CH(C₆H₁₁)-CH(C₆H₅)-CH(NH₂)-CH(OH)-CH₃',
+        parts: { suffix: '...-2-ol', root: 'hept-6-en (7C)', subs: ['3-amino', '5-ciclohexil', '4-fenil'] },
+        hints: ['Alcohol en C2, cadena de 7 carbonos con doble enlace en C6 (hept-6-en-2-ol).', 'Sustituyentes: C3 amino, C4 fenil, C5 ciclohexil.', 'Orden alfabético: 3-amino (A) -> 5-ciclohexil (C) -> 4-fenil (F).'],
+        explanation: '1) Cadena de 7 carbonos con el alcohol en C2 y doble enlace en C6 (hept-6-en-2-ol). 2) Tres sustituyentes ordenados alfabéticamente: 3-amino-5-ciclohexil-4-fenil.',
+        structure: { chain: 7, c1Right: true, principal: 'OH_chain', bonds: [{ pos: 6, order: 2 }], subs: [{ pos: 2, type: 'OH' }, { pos: 3, type: 'NH2' }, { pos: 4, type: 'ph' }, { pos: 5, type: 'chex' }] }
+      },
+      {
+        id: 'oh-9', group: 'alcohol', difficulty: 'Admin Hacker Pro',
+        name: '4-bencil-3-cloro-6-fenilhex-5-en-1-ol',
+        altNames: ['4-bencil-3-cloro-6-fenil-5-hexen-1-ol'],
+        condensed: 'C₆H₅-CH=CH-CH(CH₂C₆H₅)-CH(Cl)-CH₂-OH',
+        parts: { suffix: '...-1-ol', root: 'hex-5-en (6C)', subs: ['4-bencil', '3-cloro', '6-fenil'] },
+        hints: ['Alcohol primario en C1, cadena de 6 carbonos con doble enlace en C5 (hex-5-en-1-ol).', 'Sustituyentes: C3 cloro, C4 bencil, C6 fenil.', 'Orden alfabético: 4-bencil (B) -> 3-cloro (C) -> 6-fenil (F).'],
+        explanation: '1) El alcohol terminal es el C1 en la cadena de 6 carbonos (hex-5-en-1-ol). 2) En C4 hay bencil, en C3 cloro y en C6 fenil.',
+        structure: { chain: 6, c1Right: true, principal: 'OH_term', bonds: [{ pos: 5, order: 2 }], subs: [{ pos: 3, type: 'Cl' }, { pos: 4, type: 'bn' }, { pos: 6, type: 'ph' }] }
+      },
+      {
+        id: 'oh-10', group: 'alcohol', difficulty: 'Admin Hacker Pro',
+        name: '4-amino-3-ciclohexil-5-feniloct-7-en-5-in-2-ol',
+        altNames: ['4-amino-3-ciclohexil-6-feniloct-7-en-5-in-2-ol', '4-amino-3-ciclohexil-5-fenilhept-6-en-2-ol'],
+        condensed: 'CH₂=CH-C≡C-CH(C₆H₅)-CH(NH₂)-CH(C₆H₁₁)-CH(OH)-CH₃',
+        name: '4-amino-3-ciclohexil-5-fenilnon-8-en-6-in-2-ol',
+        altNames: ['4-amino-3-ciclohexil-5-fenil-8-nonen-6-in-2-ol'],
+        parts: { suffix: '...-2-ol', root: 'non-8-en-6-in (9C)', subs: ['4-amino', '3-ciclohexil', '5-fenil'] },
+        hints: ['Cadena de 9 carbonos numerada desde la derecha: alcohol en C2, triple enlace en C6 y doble en C8 (non-8-en-6-in-2-ol).', 'Sustituyentes: C3 ciclohexil, C4 amino, C5 fenil.', 'Orden alfabético: 4-amino (A) -> 3-ciclohexil (C) -> 5-fenil (F).'],
+        explanation: '1) C2 tiene el alcohol principal en una cadena de 9 carbonos con doble enlace en C8 y triple en C6 (non-8-en-6-in-2-ol). 2) Prefijos en orden alfabético: 4-amino-3-ciclohexil-5-fenil.',
+        structure: { chain: 9, c1Right: true, principal: 'OH_chain', bonds: [{ pos: 6, order: 3 }, { pos: 8, order: 2 }], subs: [{ pos: 2, type: 'OH' }, { pos: 3, type: 'chex' }, { pos: 4, type: 'NH2' }, { pos: 5, type: 'ph' }] }
+      }
+    ];
+
+    /***********************************************************************
+     * 2. APPLICATION STATE & LOCALSTORAGE PERSISTENCE
+     ***********************************************************************/
+    let currentGroup = 'acido';
+    let currentDiffFilter = 'ALL';
+    let currentExercise = EXERCISES[0];
+    let showCarbonNumbers = false;
+    let showCondensedFormula = false;
+
+    let userProgress = {
+      solvedIds: [],
+      streak: 0
+    };
+
+    function loadProgress() {
+      try {
+        const saved = localStorage.getItem('organica_pro_iupac_v1');
+        if (saved) {
+          userProgress = JSON.parse(saved);
+        }
+      } catch (e) {
+        console.warn('No se pudo cargar localStorage', e);
+      }
+      updateTopStats();
+    }
+
+    function saveProgress() {
+      try {
+        localStorage.setItem('organica_pro_iupac_v1', JSON.stringify(userProgress));
+      } catch (e) {}
+      updateTopStats();
+    }
+
+    function updateTopStats() {
+      const count = userProgress.solvedIds.length;
+      const pct = Math.round((count / EXERCISES.length) * 100);
+      document.getElementById('stat-completed').textContent = count;
+      document.getElementById('stat-percent').textContent = `(${pct}%)`;
+      document.getElementById('stat-streak').textContent = userProgress.streak;
+    }
+
+    /***********************************************************************
+     * 3. 2D SKELETAL CHEMICAL FORMULA SVG ENGINE
+     * Renders zig-zag carbon chains, double/triple bonds, aromatic phenyls,
+     * benzyl bridges, cycloalkanes, and colored functional groups.
+     ***********************************************************************/
+    function renderSkeletalSVG(ex) {
+      const spec = ex.structure;
+      const n = spec.chain;
+      const bondLen = 56;
+      const angleRad = (30 * Math.PI) / 180;
+      const dx = Math.cos(angleRad) * bondLen;
+      const dy = Math.sin(angleRad) * bondLen;
+
+      // Calculate dynamic width and center
+      const totalChainWidth = (n - 1) * dx;
+      const svgWidth = Math.max(680, totalChainWidth + 320);
+      const svgHeight = 320;
+      const startX = (svgWidth - totalChainWidth) / 2 - 20;
+      const baseY = 155;
+
+      // Compute coordinates for main chain carbons:
+      // Left-to-right on screen is C_n ... C_1 (since c1Right is true)
+      const coords = {};
+      for (let i = 1; i <= n; i++) {
+        // Screen index from left (0 to n-1)
+        const leftIdx = n - i;
+        const x = startX + leftIdx * dx;
+        // Zig-zag: even leftIdx is peak (up), odd is valley (down)
+        const isPeak = (leftIdx % 2 === 0);
+        const y = isPeak ? baseY - dy / 2 : baseY + dy / 2;
+        coords[i] = { x, y, isPeak };
+      }
+
+      let svgElements = [];
+
+      // Helper to draw a line
+      const drawLine = (x1, y1, x2, y2, color = '#e2e8f0', width = 2.6, dash = '') => {
+        svgElements.push(`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${color}" stroke-width="${width}" stroke-linecap="round" ${dash ? `stroke-dasharray="${dash}"` : ''} />`);
+      };
+
+      // Helper to draw parallel double/triple bonds between two points
+      const drawMultipleBond = (p1, p2, order) => {
+        const vx = p2.x - p1.x;
+        const vy = p2.y - p1.y;
+        const len = Math.hypot(vx, vy) || 1;
+        const nx = -vy / len;
+        const ny = vx / len;
+
+        if (order === 1) {
+          drawLine(p1.x, p1.y, p2.x, p2.y, '#e2e8f0', 2.8);
+        } else if (order === 2) {
+          drawLine(p1.x, p1.y, p2.x, p2.y, '#e2e8f0', 2.6);
+          const offset = 5.5;
+          const shrink = 0.12;
+          const sx1 = p1.x + vx * shrink + nx * offset;
+          const sy1 = p1.y + vy * shrink + ny * offset;
+          const sx2 = p2.x - vx * shrink + nx * offset;
+          const sy2 = p2.y - vy * shrink + ny * offset;
+          drawLine(sx1, sy1, sx2, sy2, '#38bdf8', 2.4);
+        } else if (order === 3) {
+          drawLine(p1.x, p1.y, p2.x, p2.y, '#e2e8f0', 2.6);
+          const offset = 5.5;
+          const shrink = 0.14;
+          for (let sign of [-1, 1]) {
+            const sx1 = p1.x + vx * shrink + nx * offset * sign;
+            const sy1 = p1.y + vy * shrink + ny * offset * sign;
+            const sx2 = p2.x - vx * shrink + nx * offset * sign;
+            const sy2 = p2.y - vy * shrink + ny * offset * sign;
+            drawLine(sx1, sy1, sx2, sy2, '#a855f7', 2.2);
+          }
+        }
+      };
+
+      // Helper to draw a regular polygon ring (phenyl, cyclohexyl, cyclopentyl)
+      const drawRing = (cx, cy, radius, sides, startAngle, isAromatic = false) => {
+        let pts = [];
+        for (let k = 0; k < sides; k++) {
+          const ang = startAngle + (k * 2 * Math.PI) / sides;
+          pts.push(`${(cx + radius * Math.cos(ang)).toFixed(1)},${(cy + radius * Math.sin(ang)).toFixed(1)}`);
+        }
+        svgElements.push(`<polygon points="${pts.join(' ')}" fill="#0f172a" stroke="${isAromatic ? '#f472b6' : '#cbd5e1'}" stroke-width="2.4" stroke-linejoin="round" />`);
+        if (isAromatic) {
+          svgElements.push(`<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${(radius * 0.56).toFixed(1)}" fill="none" stroke="#f472b6" stroke-width="2" stroke-dasharray="4,2" />`);
+        }
+      };
+
+      // Helper to draw text label with background halo
+      const drawAtomLabel = (x, y, htmlText, color = '#f8fafc', anchor = 'middle', fontSize = 14) => {
+        svgElements.push(`
+          <g transform="translate(${x.toFixed(1)}, ${y.toFixed(1)})">
+            <rect x="${anchor === 'start' ? -4 : anchor === 'end' ? -56 : -22}" y="-11" width="${anchor === 'middle' ? 44 : 60}" height="20" rx="5" fill="#070b14" opacity="0.88" />
+            <text x="0" y="4" fill="${color}" font-family="JetBrains Mono, monospace" font-weight="700" font-size="${fontSize}" text-anchor="${anchor}">${htmlText}</text>
+          </g>
+        `);
+      };
+
+      // 1. Draw Main Chain Bonds
+      for (let i = 1; i < n; i++) {
+        const p1 = coords[i];
+        const p2 = coords[i + 1];
+        const unsat = (spec.bonds || []).find(b => b.pos === i);
+        drawMultipleBond(p1, p2, unsat ? unsat.order : 1);
+      }
+
+      // 2. Draw Principal Functional Group at C1 (right end)
+      const c1 = coords[1];
+      const dirY = c1.isPeak ? -1 : 1; // Peak goes up, Valley goes down
+
+      if (spec.principal === 'COOH') {
+        // Double bond =O vertical, single bond -OH angled right
+        const oxY = c1.y + dirY * 38;
+        drawLine(c1.x - 3, c1.y, c1.x - 3, oxY, '#fb7185', 2.4);
+        drawLine(c1.x + 3, c1.y, c1.x + 3, oxY, '#fb7185', 2.4);
+        drawAtomLabel(c1.x, oxY + dirY * 10, 'O', '#fb7185', 'middle');
+
+        const ohX = c1.x + dx * 0.85;
+        const ohY = c1.y - dirY * (dy * 0.85);
+        drawLine(c1.x, c1.y, ohX, ohY, '#fb7185', 2.6);
+        drawAtomLabel(ohX + 6, ohY, 'OH', '#fb7185', 'start');
+      } else if (spec.principal === 'COOMe' || spec.principal === 'COOEt') {
+        // Carbonyl =O
+        const oxY = c1.y + dirY * 38;
+        drawLine(c1.x - 3, c1.y, c1.x - 3, oxY, '#fb7185', 2.4);
+        drawLine(c1.x + 3, c1.y, c1.x + 3, oxY, '#fb7185', 2.4);
+        drawAtomLabel(c1.x, oxY + dirY * 10, 'O', '#fb7185', 'middle');
+
+        // -O-R branch
+        const oX = c1.x + dx * 0.82;
+        const oY = c1.y - dirY * (dy * 0.82);
+        drawLine(c1.x, c1.y, oX, oY, '#fb7185', 2.6);
+        const rLabel = spec.principal === 'COOMe' ? 'OCH₃' : 'OCH₂CH₃';
+        drawAtomLabel(oX + 6, oY, rLabel, '#fb923c', 'start');
+      } else if (spec.principal === 'CONH2') {
+        const oxY = c1.y + dirY * 38;
+        drawLine(c1.x - 3, c1.y, c1.x - 3, oxY, '#fb7185', 2.4);
+        drawLine(c1.x + 3, c1.y, c1.x + 3, oxY, '#fb7185', 2.4);
+        drawAtomLabel(c1.x, oxY + dirY * 10, 'O', '#fb7185', 'middle');
+
+        const nX = c1.x + dx * 0.85;
+        const nY = c1.y - dirY * (dy * 0.85);
+        drawLine(c1.x, c1.y, nX, nY, '#38bdf8', 2.6);
+        drawAtomLabel(nX + 6, nY, 'NH₂', '#38bdf8', 'start');
+      } else if (spec.principal === 'CN') {
+        const nX = c1.x + 42;
+        const nY = c1.y;
+        drawLine(c1.x, c1.y, nX, nY, '#facc15', 2.6);
+        drawLine(c1.x + 6, c1.y - 5, nX - 4, nY - 5, '#facc15', 2.2);
+        drawLine(c1.x + 6, c1.y + 5, nX - 4, nY + 5, '#facc15', 2.2);
+        drawAtomLabel(nX + 8, nY, 'N', '#facc15', 'start');
+      } else if (spec.principal === 'CHO') {
+        const oxY = c1.y + dirY * 38;
+        drawLine(c1.x - 3, c1.y, c1.x - 3, oxY, '#fb7185', 2.4);
+        drawLine(c1.x + 3, c1.y, c1.x + 3, oxY, '#fb7185', 2.4);
+        drawAtomLabel(c1.x, oxY + dirY * 10, 'O', '#fb7185', 'middle');
+
+        const hX = c1.x + dx * 0.75;
+        const hY = c1.y - dirY * (dy * 0.75);
+        drawLine(c1.x, c1.y, hX, hY, '#94a3b8', 2.2, '4,3');
+        drawAtomLabel(hX + 6, hY, 'H', '#cbd5e1', 'start');
+      } else if (spec.principal === 'OH_term') {
+        const ohX = c1.x + dx * 0.85;
+        const ohY = c1.y - dirY * (dy * 0.85);
+        drawLine(c1.x, c1.y, ohX, ohY, '#fb7185', 2.6);
+        drawAtomLabel(ohX + 6, ohY, 'OH', '#fb7185', 'start');
+      }
+
+      // 3. Draw Substituents along the chain
+      (spec.subs || []).forEach(sub => {
+        const cp = coords[sub.pos];
+        if (!cp) return;
+        const sDir = cp.isPeak ? -1 : 1; // Outward direction from zig-zag vertex
+
+        // Handle terminal C_n substituent direction slightly angled left if needed
+        const isLeftEnd = (sub.pos === n);
+        const angleOffset = isLeftEnd ? -0.35 : 0;
+
+        if (sub.type === 'me') {
+          const exX = cp.x + Math.sin(angleOffset) * 38;
+          const exY = cp.y + sDir * 40;
+          drawLine(cp.x, cp.y, exX, exY, '#cbd5e1', 2.6);
+          drawAtomLabel(exX, exY + sDir * 11, 'CH₃', '#cbd5e1', 'middle', 12);
+        } else if (sub.type === 'me2') {
+          // Second methyl on same carbon (gem-dimethyl)
+          const exX = cp.x + 26;
+          const exY = cp.y + sDir * 35;
+          drawLine(cp.x, cp.y, exX, exY, '#cbd5e1', 2.6);
+          drawAtomLabel(exX + 8, exY + sDir * 10, 'CH₃', '#cbd5e1', 'middle', 12);
+        } else if (sub.type === 'et') {
+          const midX = cp.x;
+          const midY = cp.y + sDir * 34;
+          const endX = midX + 28;
+          const endY = midY + sDir * 18;
+          drawLine(cp.x, cp.y, midX, midY, '#cbd5e1', 2.6);
+          drawLine(midX, midY, endX, endY, '#cbd5e1', 2.6);
+          svgElements.push(`<circle cx="${midX}" cy="${midY}" r="2.5" fill="#cbd5e1" />`);
+          drawAtomLabel(endX + 8, endY + sDir * 8, 'CH₃', '#cbd5e1', 'middle', 11);
+        } else if (sub.type === 'OH') {
+          const exY = cp.y + sDir * 38;
+          drawLine(cp.x, cp.y, cp.x, exY, '#fb7185', 2.6);
+          drawAtomLabel(cp.x, exY + sDir * 11, 'OH', '#fb7185', 'middle', 13);
+        } else if (sub.type === 'NH2') {
+          const exY = cp.y + sDir * 38;
+          drawLine(cp.x, cp.y, cp.x, exY, '#38bdf8', 2.6);
+          drawAtomLabel(cp.x, exY + sDir * 11, 'NH₂', '#38bdf8', 'middle', 13);
+        } else if (sub.type === 'oxo') {
+          const exY = cp.y + sDir * 36;
+          drawLine(cp.x - 3, cp.y, cp.x - 3, exY, '#fb7185', 2.4);
+          drawLine(cp.x + 3, cp.y, cp.x + 3, exY, '#fb7185', 2.4);
+          drawAtomLabel(cp.x, exY + sDir * 11, 'O', '#fb7185', 'middle', 14);
+        } else if (sub.type === 'CN') {
+          const exY = cp.y + sDir * 38;
+          drawLine(cp.x, cp.y, cp.x, exY, '#facc15', 2.5);
+          drawAtomLabel(cp.x, exY + sDir * 11, 'CN', '#facc15', 'middle', 13);
+        } else if (sub.type === 'CONH2') {
+          const exY = cp.y + sDir * 38;
+          drawLine(cp.x, cp.y, cp.x, exY, '#fbbf24', 2.5);
+          drawAtomLabel(cp.x, exY + sDir * 11, 'CONH₂', '#fbbf24', 'middle', 12);
+        } else if (sub.type === 'CHO') {
+          const exY = cp.y + sDir * 38;
+          drawLine(cp.x, cp.y, cp.x, exY, '#34d399', 2.5);
+          drawAtomLabel(cp.x, exY + sDir * 11, 'CHO', '#34d399', 'middle', 12);
+        } else if (sub.type === 'Br' || sub.type === 'Cl') {
+          const exY = cp.y + sDir * 38;
+          drawLine(cp.x, cp.y, cp.x, exY, '#34d399', 2.5);
+          drawAtomLabel(cp.x, exY + sDir * 11, sub.type, '#34d399', 'middle', 13);
+        } else if (sub.type === 'ph') {
+          // Phenyl ring attached directly
+          const stemLen = 28;
+          const r = 22;
+          const attachX = cp.x + (isLeftEnd ? -12 : 0);
+          const attachY = cp.y + sDir * stemLen;
+          drawLine(cp.x, cp.y, attachX, attachY, '#f472b6', 2.4);
+          const cx = attachX + (isLeftEnd ? -6 : 0);
+          const cy = attachY + sDir * r;
+          drawRing(cx, cy, r, 6, Math.PI / 2, true);
+        } else if (sub.type === 'bn') {
+          // Benzyl group: -CH2- bridge + phenyl ring
+          const ch2X = cp.x - 10;
+          const ch2Y = cp.y + sDir * 28;
+          drawLine(cp.x, cp.y, ch2X, ch2Y, '#cbd5e1', 2.5);
+          svgElements.push(`<circle cx="${ch2X}" cy="${ch2Y}" r="3" fill="#f472b6" />`);
+          const attachX = ch2X + 18;
+          const attachY = ch2Y + sDir * 18;
+          drawLine(ch2X, ch2Y, attachX, attachY, '#f472b6', 2.4);
+          const r = 20;
+          drawRing(attachX + 6, attachY + sDir * r, r, 6, Math.PI / 2, true);
+        } else if (sub.type === 'chex') {
+          // Cyclohexyl ring (6-membered saturated)
+          const stemLen = 28;
+          const r = 22;
+          const attachX = cp.x;
+          const attachY = cp.y + sDir * stemLen;
+          drawLine(cp.x, cp.y, attachX, attachY, '#cbd5e1', 2.4);
+          drawRing(attachX, attachY + sDir * r, r, 6, Math.PI / 2, false);
+        } else if (sub.type === 'cpent') {
+          // Cyclopentyl ring (5-membered saturated)
+          const stemLen = 28;
+          const r = 20;
+          const attachX = cp.x;
+          const attachY = cp.y + sDir * stemLen;
+          drawLine(cp.x, cp.y, attachX, attachY, '#cbd5e1', 2.4);
+          drawRing(attachX, attachY + sDir * r, r, 5, -Math.PI / 2, false);
+        }
+      });
+
+      // 4. Draw Carbon Vertex Dots & Optional Carbon Numbering (C1..Cn)
+      for (let i = 1; i <= n; i++) {
+        const cp = coords[i];
+        svgElements.push(`<circle cx="${cp.x.toFixed(1)}" cy="${cp.y.toFixed(1)}" r="3.5" fill="#f8fafc" stroke="#0f172a" stroke-width="1.5" />`);
+
+        if (showCarbonNumbers) {
+          const badgeY = cp.y + (cp.isPeak ? 22 : -22);
+          svgElements.push(`
+            <g class="carbon-badge" transform="translate(${cp.x.toFixed(1)}, ${badgeY.toFixed(1)})">
+              <circle cx="0" cy="0" r="10.5" fill="#06b6d4" stroke="#083344" stroke-width="1.5" />
+              <text x="0" y="3.5" fill="#020617" font-family="JetBrains Mono, monospace" font-weight="800" font-size="10" text-anchor="middle">${i}</text>
+            </g>
+          `);
+        }
+      }
+
+      const svgMarkup = `
+        <svg viewBox="0 0 ${svgWidth} ${svgHeight}" class="w-full max-w-[780px] h-auto overflow-visible drop-shadow-md">
+          ${svgElements.join('\n')}
+        </svg>
+      `;
+
+      document.getElementById('svg-canvas-wrapper').innerHTML = svgMarkup;
+    }
+
+    /***********************************************************************
+     * 4. SMART IUPAC ANSWER VERIFICATION & DIAGNOSTIC ENGINE
+     ***********************************************************************/
+    function normalizeIUPAC(str) {
+      return (str || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // Strip accents (ácido -> acido)
+        .replace(/\s+/g, ' ')
+        .replace(/\s*-\s*/g, '-')
+        .replace(/\s*,\s*/g, ',')
+        .trim();
+    }
+
+    // Extract root chain token (et, prop, but, pent, hex, hept, oct, non)
+    function extractRootChain(normStr) {
+      const roots = ['non', 'oct', 'hept', 'hex', 'pent', 'but', 'prop', 'et'];
+      for (const r of roots) {
+        // Ignore 'metil', 'etil', 'propil', 'butil', 'ciclopentil', 'ciclohexil'
+        const stripped = normStr
+          .replace(/ciclo(pent|hex|prop|but)il/g, '')
+          .replace(/(met|et|prop|but)il/g, '');
+        if (stripped.includes(r)) return r;
+      }
+      return null;
+    }
+
+    function evaluateAttempt(userRaw, ex) {
+      const normUser = normalizeIUPAC(userRaw);
+      const allValid = [ex.name, ...(ex.altNames || []), ...(ex.acceptCanonical ? [ex.acceptCanonical] : [])].map(normalizeIUPAC);
+
+      const isExactMatch = allValid.includes(normUser);
+
+      // Component 1: Principal Group Suffix check
+      let suffixOk = false;
+      const g = ex.group;
+      if (g === 'acido') suffixOk = normUser.startsWith('acido ') && normUser.endsWith('oico');
+      else if (g === 'ester') suffixOk = normUser.includes('oato de ') && normUser.endsWith('ilo');
+      else if (g === 'amida') suffixOk = normUser.endsWith('amida');
+      else if (g === 'nitrilo') suffixOk = normUser.endsWith('nitrilo');
+      else if (g === 'aldehido') suffixOk = normUser.endsWith('al');
+      else if (g === 'cetona') suffixOk = normUser.endsWith('ona');
+      else if (g === 'alcohol') suffixOk = normUser.endsWith('ol');
+
+      // Component 2: Main Chain & Unsaturations check
+      const targetNorm = normalizeIUPAC(ex.name);
+      const expectedRoot = extractRootChain(targetNorm);
+      const userRoot = extractRootChain(normUser);
+      const hasEn = targetNorm.includes('en') ? normUser.includes('en') : !normUser.includes('en') || normUser.includes('fenil') || normUser.includes('bencil') || normUser.includes('pent');
+      const hasIn = targetNorm.includes('in') ? normUser.includes('in') : true;
+      const rootOk = (expectedRoot === userRoot) && hasEn && hasIn;
+
+      // Component 3: Substituents check
+      const expectedSubs = ex.parts.subs.filter(s => s !== 'Ninguno');
+      let matchedSubsCount = 0;
+      expectedSubs.forEach(s => {
+        // Check substituent name (e.g., '3-hidroxi' -> check 'hidroxi')
+        const subWord = normalizeIUPAC(s).replace(/^[0-9,]+\-/, '');
+        if (normUser.includes(subWord)) matchedSubsCount++;
+      });
+      const subsOk = expectedSubs.length === 0 ? true : (matchedSubsCount === expectedSubs.length);
+
+      // Component 4: Locants & Alphabetical Order
+      let locantsOk = isExactMatch;
+      if (!isExactMatch && expectedSubs.length > 0) {
+        locantsOk = expectedSubs.every(s => normUser.includes(normalizeIUPAC(s)));
+      }
+
+      // Compute Overall Accuracy Score
+      let score = 0;
+      if (isExactMatch) {
+        score = 100;
+      } else {
+        if (suffixOk) score += 30;
+        if (rootOk) score += 30;
+        if (expectedSubs.length === 0) {
+          score += 20;
+        } else {
+          score += Math.round((matchedSubsCount / expectedSubs.length) * 25);
+        }
+        if (locantsOk) score += 15;
+      }
+
+      return {
+        isExactMatch,
+        score: Math.min(100, score),
+        components: [
+          {
+            title: '1. Grupo Principal y Sufijo',
+            ok: suffixOk || isExactMatch,
+            expected: ex.parts.suffix,
+            detail: (suffixOk || isExactMatch) ? 'Identificaste correctamente la terminación del grupo prioritario.' : `Revisa el sufijo obligatorio para este grupo (${ex.parts.suffix}).`
+          },
+          {
+            title: '2. Cadena Principal e Insaturaciones',
+            ok: rootOk || isExactMatch,
+            expected: ex.parts.root,
+            detail: (rootOk || isExactMatch) ? `Raíz carbonada (${ex.parts.root}) correcta.` : `Verifica el número de carbonos de la cadena principal (${ex.parts.root}) y sus enlaces dobles/triples.`
+          },
+          {
+            title: '3. Sustituyentes y Prefijos',
+            ok: subsOk || isExactMatch,
+            expected: ex.parts.subs.join(', '),
+            detail: (subsOk || isExactMatch) ? 'Todos los grupos secundarios y radicales están presentes.' : `Faltan o sobran sustituyentes. Deben incluirse: ${ex.parts.subs.join(', ')}.`
+          },
+          {
+            title: '4. Localizadores y Orden Alfabético',
+            ok: locantsOk || isExactMatch,
+            expected: ex.name,
+            detail: (locantsOk || isExactMatch) ? 'Numeración y orden alfabético impecables.' : 'Revisa la numeración desde el C1 o el orden alfabético de los prefijos.'
+          }
+        ]
+      };
+    }
+
+    function checkUserAnswer() {
+      const inputEl = document.getElementById('user-answer');
+      const raw = inputEl.value.trim();
+      if (!raw) {
+        inputEl.focus();
+        return;
+      }
+
+      const diag = evaluateAttempt(raw, currentExercise);
+      renderFeedbackPanel(diag, false);
+
+      if (diag.isExactMatch) {
+        if (!userProgress.solvedIds.includes(currentExercise.id)) {
+          userProgress.solvedIds.push(currentExercise.id);
+        }
+        userProgress.streak += 1;
+        saveProgress();
+        renderGroupTabs();
+        renderExerciseList();
+        updateExerciseHeaderBadges();
+      } else {
+        userProgress.streak = 0;
+        saveProgress();
+      }
+    }
+
+    function surrenderAndShow() {
+      // Turn on carbon numbering to help the student see why
+      if (!showCarbonNumbers) {
+        toggleNumbering();
+      }
+      const diag = evaluateAttempt(document.getElementById('user-answer').value, currentExercise);
+      renderFeedbackPanel(diag, true);
+    }
+
+    function renderFeedbackPanel(diag, surrendered) {
+      const panel = document.getElementById('feedback-panel');
+      panel.classList.remove('hidden');
+
+      const iconEl = document.getElementById('fb-icon');
+      const titleEl = document.getElementById('fb-title');
+      const subEl = document.getElementById('fb-subtitle');
+      const scoreText = document.getElementById('fb-score-text');
+      const scoreBar = document.getElementById('fb-score-bar');
+
+      if (diag.isExactMatch && !surrendered) {
+        iconEl.className = 'w-10 h-10 rounded-xl flex items-center justify-center font-bold text-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/40';
+        iconEl.textContent = '✓';
+        titleEl.className = 'font-bold text-base sm:text-lg text-emerald-400';
+        titleEl.textContent = '¡Excelente! Nombre IUPAC 100% Correcto';
+        subEl.textContent = 'Has aplicado correctamente la jerarquía funcional, numeración y orden alfabético.';
+      } else if (surrendered) {
+        iconEl.className = 'w-10 h-10 rounded-xl flex items-center justify-center font-bold text-lg bg-amber-500/20 text-amber-400 border border-amber-500/40';
+        iconEl.textContent = '👁';
+        titleEl.className = 'font-bold text-base sm:text-lg text-amber-300';
+        titleEl.textContent = 'Solución Desglosada Paso a Paso';
+        subEl.textContent = 'Se ha activado la numeración (C1, C2...) en la fórmula gráfica para que observes el recorrido.';
+      } else {
+        iconEl.className = 'w-10 h-10 rounded-xl flex items-center justify-center font-bold text-lg bg-rose-500/20 text-rose-400 border border-rose-500/40';
+        iconEl.textContent = '!';
+        titleEl.className = 'font-bold text-base sm:text-lg text-rose-400';
+        titleEl.textContent = diag.score >= 60 ? '¡Muy cerca! Revisa los detalles en el diagnóstico' : 'Respuesta incompleta — Revisa los 4 pilares abajo';
+        subEl.textContent = 'Mira qué partes de tu nombre ya están bien y cuál necesita ajuste.';
+      }
+
+      scoreText.textContent = `${diag.score}%`;
+      scoreBar.style.width = `${diag.score}%`;
+      scoreBar.className = `h-full transition-all duration-500 ${diag.score === 100 ? 'bg-emerald-400' : diag.score >= 60 ? 'bg-amber-400' : 'bg-rose-500'}`;
+
+      // Render 4 Component Cards
+      const grid = document.getElementById('fb-components-grid');
+      grid.innerHTML = diag.components.map(c => `
+        <div class="p-3 rounded-xl border ${c.ok ? 'bg-emerald-950/25 border-emerald-500/30' : 'bg-rose-950/25 border-rose-500/30'} flex items-start gap-2.5">
+          <span class="mt-0.5 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${c.ok ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}">
+            ${c.ok ? '✓' : '✕'}
+          </span>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between gap-1">
+              <span class="text-xs font-bold ${c.ok ? 'text-emerald-300' : 'text-rose-300'}">${c.title}</span>
+              <span class="text-[11px] font-mono px-1.5 py-0.5 rounded bg-slate-900 text-slate-300 border border-slate-800 truncate">${c.expected}</span>
+            </div>
+            <p class="text-[11px] text-slate-300 mt-1 leading-snug">${c.detail}</p>
+          </div>
+        </div>
+      `).join('');
+
+      const canonical = currentExercise.acceptCanonical || currentExercise.name;
+      document.getElementById('fb-official-name').textContent = canonical;
+      const alts = (currentExercise.altNames || []).filter(a => a.toLowerCase() !== canonical.toLowerCase());
+      document.getElementById('fb-alt-names').textContent = alts.length > 0 ? `También válido: ${alts[0]}` : '';
+      document.getElementById('fb-explanation').innerHTML = `<strong class="text-cyan-300">Explicación IUPAC:</strong> ${currentExercise.explanation}`;
+
+      panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    /***********************************************************************
+     * 5. UI NAVIGATION, FILTERS, HINTS & HELPERS
+     ***********************************************************************/
+    function renderGroupTabs() {
+      const container = document.getElementById('group-tabs');
+      container.innerHTML = GROUPS_META.map(g => {
+        const groupExs = EXERCISES.filter(e => e.group === g.id);
+        const solvedCount = groupExs.filter(e => userProgress.solvedIds.includes(e.id)).length;
+        const isActive = (currentGroup === g.id);
+
+        return `
+          <button onclick="selectGroup('${g.id}')" class="w-full flex items-center justify-between px-3 py-2 rounded-xl border text-left transition ${
+            isActive 
+              ? 'bg-cyan-500/15 border-cyan-500/50 text-white shadow-sm' 
+              : 'bg-slate-950/60 border-slate-800/80 text-slate-300 hover:bg-slate-800/60'
+          }">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <span class="w-5 h-5 rounded-md bg-slate-800 text-[11px] font-mono font-bold flex items-center justify-center text-cyan-400 border border-slate-700">${g.priority}°</span>
+              <div class="truncate">
+                <div class="text-xs font-bold truncate">${g.name}</div>
+                <div class="text-[10px] font-mono text-slate-400">${g.suffix} | Pref: ${g.prefix}</div>
+              </div>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <span class="text-xs font-mono font-semibold ${solvedCount === 10 ? 'text-emerald-400' : 'text-slate-400'}">${solvedCount}/10</span>
+              ${solvedCount === 10 ? '<span class="text-emerald-400 text-xs">★</span>' : ''}
+            </div>
+          </button>
+        `;
+      }).join('');
+    }
+
+    function getFilteredExercises() {
+      return EXERCISES.filter(e => {
+        if (e.group !== currentGroup) return false;
+        if (currentDiffFilter !== 'ALL' && e.difficulty !== currentDiffFilter) return false;
+        return true;
+      });
+    }
+
+    function renderExerciseList() {
+      const list = getFilteredExercises();
+      const container = document.getElementById('exercise-list');
+
+      const diffBadgeStyle = (d) => {
+        if (d === 'Sencillo') return 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20';
+        if (d === 'Intermedio') return 'bg-amber-500/10 text-amber-300 border-amber-500/20';
+        return 'bg-rose-500/15 text-rose-300 border-rose-500/30';
+      };
+
+      container.innerHTML = list.map((ex, idx) => {
+        const isSolved = userProgress.solvedIds.includes(ex.id);
+        const isSelected = (currentExercise.id === ex.id);
+        // Find number within group (1..10)
+        const groupNum = EXERCISES.filter(e => e.group === ex.group).findIndex(e => e.id === ex.id) + 1;
+
+        return `
+          <button onclick="loadExercise('${ex.id}')" class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl border text-left transition ${
+            isSelected
+              ? 'bg-slate-800 border-cyan-400/60 text-white shadow-md'
+              : 'bg-slate-950/60 border-slate-800/80 text-slate-300 hover:bg-slate-800/40'
+          }">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <span class="w-6 h-6 rounded-lg font-mono text-xs font-bold flex items-center justify-center ${
+                isSolved ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-900 text-slate-400 border border-slate-800'
+              }">
+                ${isSolved ? '✓' : groupNum}
+              </span>
+              <div class="truncate">
+                <div class="text-xs font-semibold truncate">Ejercicio #${groupNum}</div>
+                <div class="text-[10px] font-mono text-slate-400 truncate">${ex.parts.root} • ${ex.parts.subs.length} sust.</div>
+              </div>
+            </div>
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-semibold border ${diffBadgeStyle(ex.difficulty)}">
+              ${ex.difficulty === 'Admin Hacker Pro' ? 'Hacker Pro 🔥' : ex.difficulty}
+            </span>
+          </button>
+        `;
+      }).join('');
+    }
+
+    function selectGroup(groupId) {
+      currentGroup = groupId;
+      renderGroupTabs();
+      const list = getFilteredExercises();
+      if (list.length > 0) {
+        loadExercise(list[0].id);
+      } else {
+        setDifficultyFilter('ALL');
+      }
+    }
+
+    function setDifficultyFilter(diff) {
+      currentDiffFilter = diff;
+      ['ALL', 'Sencillo', 'Intermedio', 'Admin Hacker Pro'].forEach(d => {
+        const btn = document.getElementById(`diff-btn-${d}`);
+        if (!btn) return;
+        if (d === diff) {
+          btn.classList.add('bg-slate-800', 'text-white', 'shadow');
+        } else {
+          btn.classList.remove('bg-slate-800', 'text-white', 'shadow');
+        }
+      });
+      renderExerciseList();
+      const list = getFilteredExercises();
+      if (list.length > 0 && !list.some(e => e.id === currentExercise.id)) {
+        loadExercise(list[0].id);
+      }
+    }
+
+    function updateExerciseHeaderBadges() {
+      const groupObj = GROUPS_META.find(g => g.id === currentExercise.group);
+      const groupList = EXERCISES.filter(e => e.group === currentExercise.group);
+      const groupIndex = groupList.findIndex(e => e.id === currentExercise.id) + 1;
+
+      document.getElementById('ex-badge-id').textContent = `Ejercicio ${groupIndex}/10`;
+      document.getElementById('ex-badge-group').textContent = `${groupObj.name} (${groupObj.formula})`;
+
+      const diffEl = document.getElementById('ex-badge-diff');
+      diffEl.textContent = currentExercise.difficulty;
+      if (currentExercise.difficulty === 'Sencillo') {
+        diffEl.className = 'px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30';
+      } else if (currentExercise.difficulty === 'Intermedio') {
+        diffEl.className = 'px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/30';
+      } else {
+        diffEl.className = 'px-2.5 py-1 rounded-lg text-xs font-semibold bg-rose-500/15 text-rose-300 border border-rose-500/30';
+      }
+
+      const solvedInd = document.getElementById('ex-solved-indicator');
+      if (userProgress.solvedIds.includes(currentExercise.id)) {
+        solvedInd.classList.remove('hidden');
+      } else {
+        solvedInd.classList.add('hidden');
+      }
+
+      document.getElementById('nav-position-text').textContent = `${groupObj.name} — Ejercicio ${groupIndex} de 10`;
+      document.getElementById('condensed-text').textContent = currentExercise.condensed;
+    }
+
+    function loadExercise(exId) {
+      const found = EXERCISES.find(e => e.id === exId);
+      if (!found) return;
+      currentExercise = found;
+      if (currentGroup !== found.group) {
+        currentGroup = found.group;
+        renderGroupTabs();
+      }
+      renderExerciseList();
+      updateExerciseHeaderBadges();
+
+      // Clear input & feedback
+      document.getElementById('user-answer').value = '';
+      document.getElementById('feedback-panel').classList.add('hidden');
+      document.getElementById('hint-display').textContent = 'Usa las pistas progresivas o activa la numeración de carbonos arriba.';
+
+      renderSkeletalSVG(currentExercise);
+    }
+
+    function navigateExercise(delta) {
+      const list = getFilteredExercises();
+      const idx = list.findIndex(e => e.id === currentExercise.id);
+      if (idx === -1) return;
+      const nextIdx = (idx + delta + list.length) % list.length;
+      loadExercise(list[nextIdx].id);
+    }
+
+    function pickRandomUnsolved() {
+      const unsolved = EXERCISES.filter(e => !userProgress.solvedIds.includes(e.id));
+      const pool = unsolved.length > 0 ? unsolved : EXERCISES;
+      const randomEx = pool[Math.floor(Math.random() * pool.length)];
+      currentDiffFilter = 'ALL';
+      setDifficultyFilter('ALL');
+      loadExercise(randomEx.id);
+    }
+
+    function toggleNumbering() {
+      showCarbonNumbers = !showCarbonNumbers;
+      const btn = document.getElementById('btn-toggle-numbers');
+      const dot = document.getElementById('dot-numbers');
+      if (showCarbonNumbers) {
+        btn.classList.add('border-cyan-400', 'text-cyan-300', 'bg-cyan-950/30');
+        dot.classList.replace('bg-slate-500', 'bg-cyan-400');
+      } else {
+        btn.classList.remove('border-cyan-400', 'text-cyan-300', 'bg-cyan-950/30');
+        dot.classList.replace('bg-cyan-400', 'bg-slate-500');
+      }
+      renderSkeletalSVG(currentExercise);
+    }
+
+    function toggleCondensed() {
+      showCondensedFormula = !showCondensedFormula;
+      const bar = document.getElementById('condensed-bar');
+      const btn = document.getElementById('btn-toggle-condensed');
+      if (showCondensedFormula) {
+        bar.classList.remove('hidden');
+        btn.classList.add('border-cyan-400', 'text-cyan-300', 'bg-cyan-950/30');
+      } else {
+        bar.classList.add('hidden');
+        btn.classList.remove('border-cyan-400', 'text-cyan-300', 'bg-cyan-950/30');
+      }
+    }
+
+    function revealHint(level) {
+      const hintText = currentExercise.hints[level - 1];
+      const disp = document.getElementById('hint-display');
+      disp.innerHTML = `<strong class="text-cyan-300">Pista ${level}:</strong> ${hintText}`;
+    }
+
+    function insertToken(token) {
+      const input = document.getElementById('user-answer');
+      const start = input.selectionStart || input.value.length;
+      const end = input.selectionEnd || input.value.length;
+      const val = input.value;
+      input.value = val.substring(0, start) + token + val.substring(end);
+      input.focus();
+      const newPos = start + token.length;
+      input.setSelectionRange(newPos, newPos);
+    }
+
+    function clearInput() {
+      const input = document.getElementById('user-answer');
+      input.value = '';
+      input.focus();
+    }
+
+    function toggleModal(modalId) {
+      const el = document.getElementById(modalId);
+      el.classList.toggle('hidden');
+    }
+
+    function openResetConfirm() {
+      toggleModal('modal-reset');
+    }
+
+    function confirmResetProgress() {
+      userProgress = { solvedIds: [], streak: 0 };
+      saveProgress();
+      renderGroupTabs();
+      renderExerciseList();
+      updateExerciseHeaderBadges();
+      toggleModal('modal-reset');
+    }
+
+    // Initialize Application on Load
+    window.onload = function () {
+      loadProgress();
+      renderGroupTabs();
+      loadExercise(EXERCISES[0].id);
+    };
+  </script>
+</body>
+</html>
